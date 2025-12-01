@@ -70,11 +70,14 @@ function appendMessage(message) {
     const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
     chatContainer.insertBefore(messageEl, sentinel);
     
-    // *** 修复点 1：用户消息发送后，聊天容器直接滚动到最顶部 ***
+    // *** 修复点 1：用户消息发送后，聊天容器滚动到最顶部 ***
     if (message.role === 'user') {
-        chatContainer.scrollTop = 0; // 滚动到顶部，确保用户消息置顶
+        // 使用 requestAnimationFrame 确保 DOM 元素渲染完成后再滚动，提高可靠性
+        requestAnimationFrame(() => {
+            chatContainer.scrollTop = 0; // 滚动到顶部，确保用户消息置顶
+        });
     } else if (message.role === 'assistant' || message.role === 'loading') {
-        // AI 消息和加载消息只需要确保当前消息可见，不需要强制置顶
+        // AI 消息和加载消息只需要确保当前消息可见
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
@@ -114,7 +117,7 @@ function toggleAdminButtons(isAdmin) {
 function initPage() {
     document.getElementById('main-view').style.display = 'flex';
     
-    // *** 修复点 2：确保页面加载时登录视图是隐藏的 ***
+    // *** 修复点 2：确保 loginView 在 initPage 中总是明确隐藏 ***
     loginView.style.display = 'none';
 
     const authData = localStorage.getItem('basicAuth');
@@ -155,7 +158,7 @@ showConfigButton.addEventListener('click', () => {
     }
 });
 
-// --- 核心聊天逻辑 ---
+// --- 核心聊天逻辑 (保持不变) ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
@@ -209,7 +212,7 @@ async function sendMessage() {
     }
 }
 
-// --- 新建对话功能 ---
+// --- 新建对话功能 (保持不变) ---
 newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
