@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Assistant</title> <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <title>AI Assistant</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div id="login-view">
-        <div class="card login-card">
+    <div id="login-view" class="modal-overlay" style="display: none;"> <div class="card login-card">
             <h1 class="logo-text">Admin Login</h1>
-            <p>请登录以管理 AI 助手配置。</p>
+            <span id="close-login-button" class="close-button">&times;</span> <p>请登录以管理 AI 助手配置。</p>
             <form id="login-form">
                 <input type="text" id="username" name="username" placeholder="用户名 (Admin Username)" required>
                 <input type="password" id="password" name="password" placeholder="密码 (Password)" required>
@@ -20,10 +20,11 @@
         </div>
     </div>
 
-    <div id="main-view" style="display: none;">
+    <div id="main-view" style="display: flex;">
         
         <div class="sidebar">
-            <div id="assistant-logo" class="logo-text mini">AI Assistant</div> <button id="new-chat-button" class="sidebar-button primary">
+            <div id="assistant-logo" class="logo-text mini">AI Assistant</div>
+            <button id="new-chat-button" class="sidebar-button primary">
                 + 新建对话 (Reset Context)
             </button>
             <button id="show-config-button" class="sidebar-button secondary">
@@ -36,7 +37,7 @@
 
         <div class="chat-area">
             <div id="chat-container" class="chat-container">
-                </div>
+                <div class="chat-scroll-sentinel"></div> </div>
 
             <div class="input-area">
                 <textarea id="message-input" placeholder="输入你的问题... (Shift+Enter 换行, Enter 发送)"></textarea>
@@ -53,7 +54,7 @@
                     <div class="input-group">
                         <label for="assistant-name">助手名称 (Assistant Name)</label>
                         <input type="text" id="assistant-name" name="name" placeholder="例如：Grok 模仿者" required>
-                        </div>
+                    </div>
 
                     <div class="input-group">
                         <label for="api-endpoint">AI API 端点 (Endpoint URL)</label>
