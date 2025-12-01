@@ -1,4 +1,4 @@
-// public/script.js (Revised for open chat and configurable endpoint)
+// public/script.js (最终版本，Chat开放，Admin保护，模型输入框)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -21,7 +21,6 @@ const closeConfigButton = document.getElementById('close-config-button');
 
 function toggleAdminButtons(isAdmin) {
     // 只有登录成功后，才显示配置管理和登出按钮
-    // 配置管理按钮始终可见，但点击行为不同
     logoutButton.style.display = isAdmin ? 'block' : 'none';
     // 确保 chat/login 视图正确切换
     if (document.getElementById('main-view').style.display === 'none' && !isAdmin) {
@@ -144,7 +143,7 @@ async function sendMessage() {
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
-    // 2. 调用 Chat API (无需认证)
+    // 2. 调用 Chat API (无需认证，API Key/Endpoint 在后端 KV 中读取)
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
@@ -226,7 +225,8 @@ async function fetchConfig() {
             document.getElementById('assistant-name').value = config.name || '';
             document.getElementById('api-key').value = config.apiKey || ''; 
             document.getElementById('api-endpoint').value = config.apiEndpoint || '';
-            document.getElementById('model-select').value = config.model || 'gpt-4o'; 
+            // *** 使用 input 元素的 ID 'model-name' ***
+            document.getElementById('model-name').value = config.model || ''; 
             document.getElementById('system-instruction').value = config.systemInstruction || '';
         } else {
             console.error('Failed to fetch config:', data.message);
@@ -246,6 +246,7 @@ configForm.addEventListener('submit', async (e) => {
         name: e.target.name.value,
         apiKey: e.target.apiKey.value, 
         apiEndpoint: e.target.apiEndpoint.value, 
+        // 模型名称通过 input 获取
         model: e.target.model.value,
         systemInstruction: e.target.systemInstruction.value,
     };
