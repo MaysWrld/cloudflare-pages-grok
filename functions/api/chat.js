@@ -2,6 +2,22 @@
 
 const CONFIG_KEY = 'ASSISTANT_CONFIG';
 
+/**
+ * 格式化 AI 返回的纯文本，使其在 HTML 中更易读。
+ * 主要将换行符转换为 <br> 标签。
+ * @param {string} text - AI 返回的原始文本
+ * @returns {string} 格式化后的 HTML 字符串
+ */
+function formatResponseText(text) {
+    if (!text) return '';
+    // 将双换行符 (\n\n) 转换为两个 <br> 标签，模拟段落分隔
+    let formattedText = text.replace(/\n\s*\n/g, '<br><br>');
+    // 将单换行符 (\n) 转换为 <br> 标签
+    formattedText = formattedText.replace(/\n/g, '<br>');
+    return formattedText;
+}
+
+
 // POST: 聊天接口 (开放)
 export async function onRequest(context) {
     const { request, env } = context;
@@ -14,7 +30,6 @@ export async function onRequest(context) {
         // 1. 获取 AI 助手配置
         const config = await env.AI_CONFIG_KV.get(CONFIG_KEY, 'json');
         
-        // 检查关键配置项
         if (!config || !config.apiKey || !config.apiEndpoint) {
             return new Response(JSON.stringify({
                 success: false,
@@ -27,7 +42,7 @@ export async function onRequest(context) {
 
         const AI_MODEL_ENDPOINT = config.apiEndpoint; 
 
-        // 2. 获取请求体中的消息历史 (用于关联上下文)
+        // 2. 获取请求体中的消息历史
         const { messages } = await request.json();
 
         if (!messages || messages.length === 0) {
@@ -47,11 +62,11 @@ export async function onRequest(context) {
         };
 
         const payload = {
-            model: config.model || "gpt-3.5-turbo", // 默认模型
+            model: config.model || "grok-4", 
             messages: [systemMessage, ...messages], 
-            // *** 新增温度参数 ***
             temperature: config.temperature !== undefined && config.temperature !== null ? parseFloat(config.temperature) : 0.7,
-            // 其他参数...
+            // Grok API 示例中的 stream: false 
+            stream: false, 
         };
 
         // 4. 调用外部 AI API
@@ -59,7 +74,6 @@ export async function onRequest(context) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // 假设 AI API 使用 Authorization 头部传递 Key
                 'Authorization': `Bearer ${config.apiKey}`, 
             },
             body: JSON.stringify(payload),
@@ -68,11 +82,27 @@ export async function onRequest(context) {
         const aiData = await aiResponse.json();
         
         // 5. 返回 AI 的回复
-        const assistantMessage = aiData.choices?.[0]?.message?.content || "Sorry, I encountered an error. Check the AI API response format.";
+        const rawContent = aiData.choices?.[0]?.message?.content;
+        
+        if (!rawContent) {
+            // 如果 API 返回空内容或错误格式，返回错误
+            const errorMessage = aiData.error?.message || "Received invalid response from AI API.";
+             return new Response(JSON.stringify({
+                success: false,
+                message: errorMessage,
+            }), {
+                headers: { 'Content-Type': 'application/json' },
+                status: 502,
+            });
+        }
+
+        // *** 格式化文本 ***
+        const formattedReply = formatResponseText(rawContent);
+
 
         return new Response(JSON.stringify({
             success: true,
-            reply: assistantMessage,
+            reply: formattedReply, // 返回格式化后的 HTML 字符串
         }), {
             headers: { 'Content-Type': 'application/json' },
             status: 200,
