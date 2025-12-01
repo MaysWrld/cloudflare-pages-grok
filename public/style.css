@@ -1,0 +1,293 @@
+/* ---------------------------------------------------- */
+/* Global & Utilities - 模仿 Grok 的深色主题和字体 */
+/* ---------------------------------------------------- */
+
+:root {
+    --bg-color: #000000;
+    --card-color: #0a0a0a;
+    --text-color: #e0e0e0;
+    --primary-color: #4CAF50; /* 强调色：霓虹绿 */
+    --secondary-color: #333333;
+    --border-radius: 8px;
+    --font-family: 'Roboto Mono', monospace;
+    --glow-effect: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden; /* 防止滚动条影响整体视觉 */
+}
+
+/* 霓虹标题 */
+.logo-text, .neon-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    text-shadow: var(--glow-effect);
+    margin-bottom: 20px;
+}
+
+.logo-text.mini {
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    padding: 10px;
+    text-align: center;
+}
+
+/* Card 基础样式 (登录/配置面板) */
+.card {
+    background: var(--card-color);
+    border-radius: var(--border-radius);
+    padding: 40px;
+    box-shadow: var(--glow-effect); /* 突出卡片 */
+    border: 1px solid var(--primary-color);
+    max-width: 450px;
+    width: 90%;
+}
+
+/* Form 元素 */
+input, textarea, select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 15px;
+    border: 1px solid var(--secondary-color);
+    background-color: #111;
+    color: var(--text-color);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    font-family: var(--font-family);
+}
+
+input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 3px var(--primary-color);
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    color: var(--primary-color);
+}
+
+/* 按钮样式 */
+.submit-button, .send-button, .sidebar-button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.1s, box-shadow 0.3s;
+    font-family: var(--font-family);
+}
+
+.submit-button, .send-button {
+    background-color: var(--primary-color);
+    color: var(--bg-color);
+    box-shadow: var(--glow-effect);
+}
+
+.submit-button:hover, .send-button:hover {
+    background-color: #5cb85c;
+    box-shadow: 0 0 8px var(--primary-color);
+}
+
+/* ---------------------------------------------------- */
+/* Layout - Main View */
+/* ---------------------------------------------------- */
+
+#main-view {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 250px;
+    background-color: var(--card-color);
+    padding: 20px;
+    border-right: 1px solid var(--secondary-color);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.sidebar-button {
+    background: none;
+    border: 1px solid var(--secondary-color);
+    color: var(--text-color);
+    text-align: left;
+    padding: 10px 15px;
+}
+
+.sidebar-button.primary {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    box-shadow: var(--glow-effect);
+}
+
+.sidebar-button:hover {
+    background-color: #1a1a1a;
+}
+
+/* Chat Area */
+.chat-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    max-width: 1000px;
+    margin: 0 auto; /* 居中聊天区域 */
+    width: 100%;
+}
+
+.chat-container {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding-right: 10px; /* 留出滚动条空间 */
+}
+
+/* 消息样式 */
+.message {
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: var(--border-radius);
+    max-width: 85%;
+    line-height: 1.6;
+    word-wrap: break-word;
+}
+
+.message p {
+    margin: 0;
+}
+
+/* 用户消息 */
+.message.user {
+    background-color: #212121;
+    margin-left: auto;
+    border: 1px solid #3d3d3d;
+}
+
+/* 助手消息 */
+.message.assistant {
+    background-color: #1a1a1a;
+    border-left: 3px solid var(--primary-color);
+    box-shadow: 0 0 3px rgba(76, 175, 80, 0.5); /* 霓虹绿的轻微阴影 */
+}
+
+.message.error {
+    background-color: #5c1818;
+    color: #ffcccc;
+    border-left: 3px solid #ff4444;
+}
+
+/* 输入区域 */
+.input-area {
+    display: flex;
+    gap: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--secondary-color);
+}
+
+#message-input {
+    flex-grow: 1;
+    height: 50px;
+    min-height: 50px;
+    max-height: 200px;
+    margin-bottom: 0;
+    /* 模仿 Grok 风格，使用高亮边框 */
+    border: 1px solid var(--primary-color);
+    box-shadow: var(--glow-effect);
+}
+
+.send-button {
+    width: 100px;
+    padding: 10px;
+    height: 50px;
+    margin-bottom: 0;
+    box-shadow: none; /* 仅在 hover 时有 glow */
+}
+
+.send-button:hover {
+    box-shadow: var(--glow-effect);
+}
+
+/* ---------------------------------------------------- */
+/* Modal Overlay & Admin Panel */
+/* ---------------------------------------------------- */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* 几乎全黑的半透明背景 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.admin-card {
+    position: relative;
+    max-width: 600px;
+    width: 90%;
+}
+
+.close-button {
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 30px;
+    color: var(--primary-color);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-button:hover {
+    color: #fff;
+    text-shadow: 0 0 5px #fff;
+}
+
+/* 调整配置表单的按钮样式 */
+#config-form .submit-button {
+    margin-top: 20px;
+}
+
+/* ---------------------------------------------------- */
+/* Scrollbar Styling (Webkit Browsers) */
+/* ---------------------------------------------------- */
+.chat-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color);
+    border-radius: 10px;
+    box-shadow: var(--glow-effect);
+}
+
+.chat-container::-webkit-scrollbar-track {
+    background: #1a1a1a;
+}
