@@ -21,6 +21,7 @@ body {
 
 .sidebar {
     width: 250px;
+    min-width: 180px; /* 最小宽度，避免内容被挤压 */
     background-color: #191919;
     padding: 20px;
     border-right: 1px solid #222;
@@ -77,21 +78,21 @@ body {
 .chat-container {
     flex-grow: 1;
     overflow-y: auto;
-    padding-right: 10px; /* 滚动条留白 */
+    padding-right: 10px; 
 }
 
 /* 消息基础样式 */
 .message {
-    padding: 10px 15px;
+    padding: 12px 18px; /* 增加 padding */
     margin-bottom: 15px;
     max-width: 80%;
-    border-radius: 8px;
+    border-radius: 20px; /* 变更：更圆润的形状 */
     font-size: 0.95em;
     line-height: 1.5;
     word-wrap: break-word;
-    animation-duration: 0.5s; /* 统一动画时长 */
+    animation-duration: 0.5s; 
     animation-fill-mode: forwards;
-    opacity: 0; /* 默认隐藏，等待 JS/CSS 动画显示 */
+    opacity: 0; 
 }
 
 .message p {
@@ -100,10 +101,10 @@ body {
 
 /* 用户消息 (右侧) */
 .message.user {
-    background-color: #007bff; /* 蓝色 */
+    background-color: #007bff;
     color: white;
     margin-left: auto;
-    border-bottom-right-radius: 2px;
+    border-top-right-radius: 4px; /* 保留一个尖角，可选 */
 }
 
 /* AI 助手消息 (左侧) */
@@ -111,18 +112,24 @@ body {
     background-color: #2a2a2a;
     color: #e0e0e0;
     margin-right: auto;
-    border-bottom-left-radius: 2px;
+    border-top-left-radius: 4px; /* 保留一个尖角，可选 */
     /* 默认宽度为 0，用于展开动画 */
     width: 0;
-    padding: 10px 0; /* 隐藏内容 padding */
+    padding: 12px 0; /* 隐藏内容 padding */
     overflow: hidden; 
+}
+
+/* 聊天列表底部的动态哨兵，确保有足够的空白 */
+.chat-scroll-sentinel {
+    height: 60vh; /* 设定一个动态高度，保证屏幕底部有大量空白 */
+    pointer-events: none;
 }
 
 /* AI 消息展开动画 */
 @keyframes expand-message {
     to {
         width: auto;
-        padding: 10px 15px;
+        padding: 12px 18px;
         opacity: 1;
         max-width: 80%;
     }
@@ -148,40 +155,34 @@ body {
 }
 .message.user {
     animation-name: fade-in-up;
-    animation-delay: 0.1s; /* 略微延迟，避免与输入框动画冲突 */
+    animation-delay: 0.1s; 
 }
 
 /* 2. AI 正在思考 (加载) 消息 - 呼吸动画 */
 @keyframes pulse {
-    /* 加载动画开始：深色背景，柔和的边框 */
     0% { background-color: #202020; border-left-color: #00c7e250; } 
-    /* 50%：浅色背景，高亮的边框 */
     50% { background-color: #333333; border-left-color: #00c7e2; }
-    /* 100%：返回深色背景 */
     100% { background-color: #202020; border-left-color: #00c7e250; } 
 }
 
 .message.assistant.loading {
-    /* 覆盖基础样式，确保是左侧展开 */
     margin-right: auto;
     background-color: #2a2a2a;
     border-left: 3px solid #00c7e2;
     color: #ccc;
     font-style: italic;
     
-    /* 应用呼吸动画 */
     animation-name: pulse;
-    animation-duration: 1.5s; /* 略微加快速度，使其更明显 */
+    animation-duration: 1.5s; 
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
 
-    /* 加载消息也应用展开动画，并保持不隐藏 */
     width: auto;
     opacity: 1;
-    padding: 10px 15px;
+    padding: 12px 18px;
+    border-radius: 20px;
 }
 
-/* 隐藏加载消息中的默认 spinner，因为我们用文本提示 */
 .message.assistant.loading .spinner {
     display: none;
 }
@@ -238,6 +239,7 @@ body {
     margin-right: auto;
     font-style: italic;
     opacity: 1;
+    border-radius: 20px;
 }
 
 .modal-overlay {
@@ -263,6 +265,7 @@ body {
 .login-card {
     width: 350px;
     text-align: center;
+    position: relative; /* 使关闭按钮定位 */
 }
 
 .admin-card {
@@ -291,56 +294,76 @@ body {
     color: #e0e0e0;
 }
 
-.input-group {
-    margin-bottom: 20px;
-}
+/* ... (输入组样式保持不变) ... */
 
-.input-group label {
-    display: block;
-    margin-bottom: 8px;
-    color: #ccc;
-    font-weight: 700;
-}
 
-.input-group input[type="text"],
-.input-group input[type="password"],
-.input-group input[type="url"],
-.input-group input[type="number"],
-.input-group textarea {
-    width: 100%;
-    padding: 12px;
-    border: 1px solid #333;
-    border-radius: 6px;
-    background-color: #222;
-    color: #e0e0e0;
-    font-family: 'Roboto Mono', monospace;
-    box-sizing: border-box;
-}
+/* -------------------- 响应式设计 (手机支持) -------------------- */
+@media (max-width: 768px) {
+    body {
+        /* 在移动端，让主体内容铺满整个屏幕 */
+        align-items: flex-start;
+    }
+    
+    #main-view {
+        width: 100%;
+        height: 100%;
+        flex-direction: column; /* 侧边栏和聊天区垂直堆叠 */
+        max-width: 100%;
+    }
 
-.input-group textarea {
-    min-height: 100px;
-    resize: vertical;
-}
+    .sidebar {
+        width: 100%;
+        min-width: 100%;
+        padding: 15px;
+        border-right: none;
+        border-bottom: 1px solid #222;
+        flex-direction: row; /* 按钮横向排列 */
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    
+    .logo-text.mini {
+        margin-bottom: 0;
+        font-size: 1.2em;
+    }
 
-.input-group small {
-    display: block;
-    margin-top: 5px;
-    font-size: 0.8em;
-    color: #999;
-}
+    /* 移动端隐藏登出按钮，仅保留在配置管理面板中 */
+    #logout-button {
+        display: none !important; 
+    }
+    
+    .sidebar-button {
+        padding: 8px 10px;
+        margin-bottom: 0;
+        font-size: 0.9em;
+    }
+    
+    .chat-area {
+        padding: 10px;
+        flex: 1;
+        overflow: hidden; /* 防止聊天区域滚动条溢出 */
+    }
 
-.submit-button {
-    width: 100%;
-    padding: 15px;
-    margin-top: 10px;
-    border: none;
-    border-radius: 8px;
-    background-color: #00c7e2;
-    color: #121212;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-.submit-button:hover {
-    background-color: #00a0b8;
+    .message {
+        max-width: 95%; /* 移动端气泡更宽 */
+    }
+    
+    .input-area {
+        padding: 10px 0;
+    }
+    
+    #message-input {
+        padding: 10px;
+        font-size: 1em;
+    }
+
+    .send-button {
+        padding: 10px 15px;
+    }
+    
+    .admin-card {
+        width: 95%;
+        padding: 20px;
+    }
 }
