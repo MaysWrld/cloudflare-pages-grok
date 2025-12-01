@@ -24,6 +24,7 @@ const closeLoginButton = document.getElementById('close-login-button');
 
 // 用于显示 AI 正在思考的加载消息的 DOM 元素
 let loadingMessageEl = null; 
+let countdownInterval = null; // 倒计时计时器
 
 // --- 动画和效果函数 ---
 
@@ -70,14 +71,14 @@ function appendMessage(message) {
     const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
     chatContainer.insertBefore(messageEl, sentinel);
     
-    // *** 修复点 1：用户消息发送后，聊天容器滚动到最顶部 ***
+    // *** 修复点 3：用户消息发送后，确保用户消息置顶到视口最上方 ***
     if (message.role === 'user') {
-        // 使用 requestAnimationFrame 确保 DOM 元素渲染完成后再滚动，提高可靠性
         requestAnimationFrame(() => {
-            chatContainer.scrollTop = 0; // 滚动到顶部，确保用户消息置顶
+            // 使用 scrollIntoView 配合 block: 'start' 确保元素在顶部
+            messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     } else if (message.role === 'assistant' || message.role === 'loading') {
-        // AI 消息和加载消息只需要确保当前消息可见
+        // AI 消息和加载消息只需要确保当前消息可见，不需要强制置顶
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
@@ -88,19 +89,42 @@ function appendMessage(message) {
 function toggleLoadingState(isLoading) {
     messageInput.disabled = isLoading;
     sendButton.disabled = isLoading;
-    sendButton.textContent = isLoading ? '深度思考30 秒...' : '发送';
+    
+    // 清除上一次的倒计时
+    if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+    }
 
     if (isLoading) {
+        // *** 修复点 4：实现 30 秒倒计时 ***
+        let count = 30;
+        
         loadingMessageEl = document.createElement('div');
         loadingMessageEl.classList.add('message', 'assistant', 'loading');
-        loadingMessageEl.innerHTML = `<p>深度思考30 秒... <span class="spinner">🧠</span></p>`; 
         
+        const updateCountdown = () => {
+            loadingMessageEl.innerHTML = `<p>深度思考中，预计 ${count} 秒...</p>`; 
+            count--;
+            if (count < 0) {
+                 // 倒计时结束，但请求未结束，显示默认文本
+                loadingMessageEl.innerHTML = `<p>深度思考中，请稍候... </p>`;
+                clearInterval(countdownInterval);
+            }
+        };
+
         const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
         chatContainer.insertBefore(loadingMessageEl, sentinel);
         
+        // 立即运行一次并设置间隔
+        updateCountdown();
+        countdownInterval = setInterval(updateCountdown, 1000);
+
+        sendButton.textContent = '思考中...';
         loadingMessageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
     } else {
+        sendButton.textContent = '发送';
         if (loadingMessageEl) {
             loadingMessageEl.remove();
             loadingMessageEl = null;
@@ -111,7 +135,8 @@ function toggleLoadingState(isLoading) {
 // --- 页面初始化和 UI 切换 ---
 
 function toggleAdminButtons(isAdmin) {
-    logoutButton.style.display = isAdmin ? 'block' : 'none';
+    // 移动端隐藏 class 在 CSS 中处理，这里只处理 display:none 的逻辑
+    logoutButton.style.display = isAdmin ? 'block' : 'none'; 
 }
 
 function initPage() {
@@ -129,7 +154,10 @@ function initPage() {
         toggleAdminButtons(false);
     }
     
-    fetchConfig(true);
+    // *** 修复点 2：仅在必要时（已登录）才尝试获取配置更新 Logo，避免触发后端 Basic Auth 提示 ***
+    if (basicAuthHeader) {
+        fetchConfig(true); 
+    }
 }
 
 // --- 事件监听器 ---
@@ -158,7 +186,7 @@ showConfigButton.addEventListener('click', () => {
     }
 });
 
-// --- 核心聊天逻辑 (保持不变) ---
+// --- 核心聊天逻辑 ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
@@ -178,6 +206,16 @@ async function sendMessage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: conversationHistory }) 
         });
+
+        // 检查是否有 Basic Auth 提示（尽管这主要是后端配置问题，前端仍应处理）
+        if (response.status === 401 && !basicAuthHeader) {
+            // 如果后端对聊天 API 也进行了保护且用户未登录，则显示登录提示
+            toggleLoadingState(false);
+            appendMessage({ role: 'error', content: '您未登录管理员账户，无法发送消息，请先登录。' });
+            // 不自动弹出登录框，等待用户点击配置按钮
+            conversationHistory.pop();
+            return;
+        }
 
         data = await response.json();
     } catch (error) {
@@ -212,7 +250,7 @@ async function sendMessage() {
     }
 }
 
-// --- 新建对话功能 (保持不变) ---
+// --- 新建对话功能 ---
 newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
@@ -231,9 +269,12 @@ closeConfigButton.addEventListener('click', () => {
  * 获取配置并填充表单，或仅更新前端 Logo。
  */
 async function fetchConfig(updateLogoOnly = false) {
-    if (!updateLogoOnly && !basicAuthHeader) return; 
+    if (!basicAuthHeader) {
+        // 如果未登录，只更新 Logo 也不进行任何网络请求
+        return; 
+    }
     
-    const headers = updateLogoOnly && !basicAuthHeader ? {} : { 'Authorization': basicAuthHeader };
+    const headers = { 'Authorization': basicAuthHeader };
 
     try {
         const response = await fetch('/api/config', {
