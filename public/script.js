@@ -1,4 +1,4 @@
-// public/script.js (最终版本，新增 Temperature)
+// public/script.js (最终版本，新增 Temperature 和 Loading State)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -16,6 +16,9 @@ const loginForm = document.getElementById('login-form');
 const configForm = document.getElementById('config-form');
 const adminPanel = document.getElementById('admin-panel');
 const closeConfigButton = document.getElementById('close-config-button');
+
+// 用于显示 AI 正在思考的加载消息的 DOM 元素
+let loadingMessageEl = null; 
 
 // --- 页面初始化和 UI 切换 ---
 
@@ -49,6 +52,32 @@ function initPage() {
             role: 'assistant', 
             content: `你好，我是你的专属 AI 助手，请开始提问吧！` 
         });
+    }
+}
+
+// --- 加载状态管理 ---
+/**
+ * 切换输入区域和聊天区域的加载状态
+ * @param {boolean} isLoading - 是否处于加载中
+ */
+function toggleLoadingState(isLoading) {
+    messageInput.disabled = isLoading;
+    sendButton.disabled = isLoading;
+    sendButton.textContent = isLoading ? '思考中...' : '发送';
+
+    if (isLoading) {
+        // 创建并显示加载消息
+        loadingMessageEl = document.createElement('div');
+        loadingMessageEl.classList.add('message', 'assistant', 'loading');
+        loadingMessageEl.innerHTML = `<p>正在思考... <span class="spinner">🧠</span></p>`; 
+        chatContainer.appendChild(loadingMessageEl);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    } else {
+        // 移除加载消息
+        if (loadingMessageEl) {
+            loadingMessageEl.remove();
+            loadingMessageEl = null;
+        }
     }
 }
 
@@ -143,7 +172,10 @@ async function sendMessage() {
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
-    // 2. 调用 Chat API 
+    // 2. 启用加载状态
+    toggleLoadingState(true);
+
+    // 3. 调用 Chat API 
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
@@ -155,9 +187,12 @@ async function sendMessage() {
 
         const data = await response.json();
 
+        // 4. 关闭加载状态
+        toggleLoadingState(false);
+        
         if (data.success) {
             const assistantReply = data.reply;
-            // 3. 显示 AI 助手回复，并添加到历史记录
+            // 5. 显示 AI 助手回复，并添加到历史记录
             appendMessage({ role: 'assistant', content: assistantReply });
             conversationHistory.push({ role: 'assistant', content: assistantReply });
         } else {
@@ -171,6 +206,8 @@ async function sendMessage() {
 
     } catch (error) {
         console.error('Chat error:', error);
+        // 4. 关闭加载状态
+        toggleLoadingState(false);
         appendMessage({ role: 'error', content: `与 AI 服务通信失败：${error.message}` });
         if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
              conversationHistory.pop(); 
@@ -180,6 +217,8 @@ async function sendMessage() {
 
 // --- 新建对话功能 ---
 newChatButton.addEventListener('click', () => {
+    // 确保在重置时没有加载状态
+    toggleLoadingState(false); 
     conversationHistory = []; 
     chatContainer.innerHTML = ''; 
     // 重新初始化欢迎语
@@ -225,7 +264,6 @@ async function fetchConfig() {
             document.getElementById('api-key').value = config.apiKey || ''; 
             document.getElementById('api-endpoint').value = config.apiEndpoint || '';
             document.getElementById('model-name').value = config.model || ''; 
-            // *** 读取 temperature ***
             document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
             document.getElementById('system-instruction').value = config.systemInstruction || '';
         } else {
@@ -255,7 +293,6 @@ configForm.addEventListener('submit', async (e) => {
         apiKey: e.target.apiKey.value, 
         apiEndpoint: e.target.apiEndpoint.value, 
         model: e.target.model.value,
-        // *** 存储 temperature ***
         temperature: parseFloat(temperatureValue), 
         systemInstruction: e.target.systemInstruction.value,
     };
