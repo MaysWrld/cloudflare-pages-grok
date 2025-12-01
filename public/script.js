@@ -1,4 +1,4 @@
-// public/script.js (功能无变动，确保发送和滚动逻辑正确)
+// public/script.js (最终修复版本)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -43,7 +43,6 @@ function typeWriterEffect(targetElement, text) {
                     targetElement.innerHTML += text.charAt(i);
                     i++;
                 }
-                // 禁用 AI 消息展示时的自动滚动
                 setTimeout(type, TYPING_SPEED_MS); 
             } else {
                 resolve();
@@ -71,9 +70,9 @@ function appendMessage(message) {
     const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
     chatContainer.insertBefore(messageEl, sentinel);
     
+    // *** 修复点 1：用户消息发送后，聊天容器直接滚动到最顶部 ***
     if (message.role === 'user') {
-        // 将用户消息滚动到屏幕顶部 (滚动到该元素的位置，减去一个顶部边距)
-        chatContainer.scrollTo({ top: messageEl.offsetTop - 20, behavior: 'smooth' });
+        chatContainer.scrollTop = 0; // 滚动到顶部，确保用户消息置顶
     } else if (message.role === 'assistant' || message.role === 'loading') {
         // AI 消息和加载消息只需要确保当前消息可见，不需要强制置顶
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -114,6 +113,8 @@ function toggleAdminButtons(isAdmin) {
 
 function initPage() {
     document.getElementById('main-view').style.display = 'flex';
+    
+    // *** 修复点 2：确保页面加载时登录视图是隐藏的 ***
     loginView.style.display = 'none';
 
     const authData = localStorage.getItem('basicAuth');
@@ -149,6 +150,7 @@ showConfigButton.addEventListener('click', () => {
         adminPanel.style.display = 'flex';
         fetchConfig(); 
     } else {
+        // 只有在点击配置且未登录时，才显示登录框
         loginView.style.display = 'flex';
     }
 });
