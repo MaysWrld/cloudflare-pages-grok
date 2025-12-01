@@ -18,6 +18,7 @@ const loginForm = document.getElementById('login-form');
 const configForm = document.getElementById('config-form');
 const adminPanel = document.getElementById('admin-panel');
 const closeConfigButton = document.getElementById('close-config-button');
+const assistantLogo = document.getElementById('assistant-logo'); // 新增: 获取 Logo 元素
 
 // 用于显示 AI 正在思考的加载消息的 DOM 元素
 let loadingMessageEl = null; 
@@ -43,7 +44,8 @@ function typeWriterEffect(targetElement, text) {
                     targetElement.innerHTML += text.charAt(i);
                     i++;
                 }
-                chatContainer.scrollTop = chatContainer.scrollHeight;
+                // *** 移除：禁用 AI 消息展示时的自动滚动 ***
+                // chatContainer.scrollTop = chatContainer.scrollHeight; 
                 setTimeout(type, TYPING_SPEED_MS); 
             } else {
                 resolve();
@@ -64,15 +66,27 @@ function appendMessage(message) {
 
     if (message.role === 'assistant') {
         messageEl.classList.add('animate-in');
-        // AI 消息的内容初始为空，等待打字机效果填充
         messageEl.innerHTML = `<p></p>`;
     } else {
-        // 用户消息直接显示内容，依赖 CSS 漂移动画
         messageEl.innerHTML = `<p>${message.content.replace(/\n/g, '<br>')}</p>`; 
     }
     
     chatContainer.appendChild(messageEl);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    // *** 变更：如果是用户消息，将其滚动到顶部 ***
+    if (message.role === 'user') {
+        // 滚动到顶部，让 AI 有足够的空间显示回复
+        chatContainer.scrollTo({ top: messageEl.offsetTop - 20, behavior: 'smooth' });
+    } else if (message.role !== 'loading') {
+        // AI 的最终回复不滚动
+        return messageEl;
+    }
+    
+    // 确保其他情况滚动到底部（如加载消息）
+    if (message.role === 'assistant' || message.role === 'error' || message.role === 'loading') {
+         chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
     return messageEl;
 }
 
@@ -80,12 +94,14 @@ function appendMessage(message) {
 function toggleLoadingState(isLoading) {
     messageInput.disabled = isLoading;
     sendButton.disabled = isLoading;
-    sendButton.textContent = isLoading ? '思考中...' : '发送';
+    // *** 变更：修改加载文本 ***
+    sendButton.textContent = isLoading ? '深度思考30 秒...' : '发送';
 
     if (isLoading) {
         loadingMessageEl = document.createElement('div');
         loadingMessageEl.classList.add('message', 'assistant', 'loading');
-        loadingMessageEl.innerHTML = `<p>正在思考... <span class="spinner">🧠</span></p>`; 
+        // *** 变更：修改加载文本 ***
+        loadingMessageEl.innerHTML = `<p>深度思考30 秒... <span class="spinner">🧠</span></p>`; 
         chatContainer.appendChild(loadingMessageEl);
         chatContainer.scrollTop = chatContainer.scrollHeight;
     } else {
@@ -118,7 +134,8 @@ function initPage() {
         toggleAdminButtons(false);
     }
     
-    // 移除初始欢迎语
+    // 页面初始化时尝试获取配置，以显示正确的助手名称
+    fetchConfig(true);
 }
 
 
@@ -135,10 +152,12 @@ async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
 
+    // 1. 显示用户消息，并滚动到顶部
     appendMessage({ role: 'user', content: userMessage }); 
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
+    // 2. 启用加载状态
     toggleLoadingState(true);
 
     let response;
@@ -162,22 +181,22 @@ async function sendMessage() {
         return;
     }
 
+    // 3. 关闭加载状态
     toggleLoadingState(false);
     
     if (data.success) {
-        // assistantReply 是后端格式化后的 HTML 字符串
         const assistantReply = data.reply;
         
+        // 4. 创建 AI 消息元素 (应用展开动画)
         const assistantMessageEl = appendMessage({ role: 'assistant', content: assistantReply });
         const textTarget = assistantMessageEl.querySelector('p');
 
-        // 等待 CSS 展开动画完成
         await new Promise(r => setTimeout(r, 500)); 
 
-        // 使用打印机效果显示文本
+        // 5. 使用打印机效果显示文本
         await typeWriterEffect(textTarget, assistantReply);
         
-        // 添加原始内容（去除 <br> 标签）到历史记录，以保持上下文的清洁
+        // 6. 添加到历史记录
         conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
     } else {
         const errorMsg = data.message.includes('not configured') 
@@ -193,26 +212,34 @@ newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
     chatContainer.innerHTML = ''; 
-    
-    // 移除新对话欢迎语
 });
 
 
-// --- 管理面板交互和配置管理 (保持不变) ---
+// --- 管理面板交互和配置管理 ---
 
 closeConfigButton.addEventListener('click', () => {
     adminPanel.style.display = 'none';
 });
 
-async function fetchConfig() {
-    if (!basicAuthHeader) return; 
+/**
+ * 获取配置并填充表单，或仅更新前端 Logo。
+ * @param {boolean} updateLogoOnly - 是否只更新 Logo，不显示面板。
+ */
+async function fetchConfig(updateLogoOnly = false) {
+    // 如果不是仅更新 Logo，且未登录，则直接返回
+    if (!updateLogoOnly && !basicAuthHeader) return; 
+    
+    // 如果仅更新 Logo，不需认证
+    const headers = updateLogoOnly && !basicAuthHeader ? {} : { 'Authorization': basicAuthHeader };
 
     try {
         const response = await fetch('/api/config', {
             method: 'GET',
-            headers: { 'Authorization': basicAuthHeader }
+            headers: headers
         });
         
+        const data = await response.json();
+
         if (response.status === 401) {
             alert('管理员登录已过期，请重新登录。');
             localStorage.removeItem('basicAuth');
@@ -222,24 +249,43 @@ async function fetchConfig() {
             return;
         }
 
-        const data = await response.json();
-
         if (data.success && data.config) {
             const config = data.config;
-            document.getElementById('assistant-name').value = config.name || '';
-            document.getElementById('api-key').value = config.apiKey || ''; 
-            document.getElementById('api-endpoint').value = config.apiEndpoint || '';
-            document.getElementById('model-name').value = config.model || ''; 
-            document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
-            document.getElementById('system-instruction').value = config.systemInstruction || '';
-        } else {
+            
+            // *** 变更：更新前端助手名称 ***
+            if (assistantLogo && config.name) {
+                assistantLogo.textContent = config.name;
+            }
+
+            if (!updateLogoOnly) {
+                // 填充表单（仅在打开面板时）
+                document.getElementById('assistant-name').value = config.name || '';
+                document.getElementById('api-key').value = config.apiKey || ''; 
+                document.getElementById('api-endpoint').value = config.apiEndpoint || '';
+                document.getElementById('model-name').value = config.model || ''; 
+                document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
+                document.getElementById('system-instruction').value = config.systemInstruction || '';
+            }
+
+        } else if (!updateLogoOnly) {
             console.error('Failed to fetch config:', data.message);
         }
     } catch (error) {
         console.error('Error fetching config:', error);
-        alert('无法连接到配置 API。');
+        if (!updateLogoOnly) alert('无法连接到配置 API。');
     }
 }
+
+showConfigButton.addEventListener('click', () => {
+    if (basicAuthHeader) {
+        adminPanel.style.display = 'flex';
+        fetchConfig(); // 再次调用以确保配置数据最新
+    } else {
+        document.getElementById('login-view').style.display = 'flex';
+        document.getElementById('main-view').style.display = 'none';
+    }
+});
+
 
 configForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -284,6 +330,10 @@ configForm.addEventListener('submit', async (e) => {
 
         if (data.success) {
             alert('配置保存成功！');
+            // 保存成功后立即更新 Logo
+            if (assistantLogo && configData.name) {
+                 assistantLogo.textContent = configData.name;
+            }
             adminPanel.style.display = 'none';
         } else {
             alert('保存配置失败: ' + data.message);
