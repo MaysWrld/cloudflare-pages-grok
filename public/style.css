@@ -17,8 +17,10 @@ body {
     height: 100%;
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     background-color: #1a1a1a;
+    position: relative; /* 用于手机端侧边栏定位 */
 }
 
+/* 侧边栏：PC 默认显示 */
 .sidebar {
     width: 250px;
     min-width: 180px; 
@@ -28,6 +30,8 @@ body {
     display: flex;
     flex-direction: column; 
     flex-shrink: 0; 
+    transition: width 0.3s ease; /* 伸缩动画 */
+    z-index: 500; 
 }
 
 .logo-text {
@@ -41,10 +45,10 @@ body {
     margin-bottom: 30px;
 }
 
+/* 默认情况下，移动端隐藏的按钮在 PC 上显示 */
 .sidebar-button.mobile-hidden {
     display: block; 
 }
-/* ... (侧边栏按钮样式保持不变) ... */
 
 .sidebar-button {
     padding: 12px;
@@ -55,15 +59,22 @@ body {
     font-family: 'Roboto Mono', monospace;
     transition: background-color 0.3s;
 }
+
 .sidebar-button.primary {
     background-color: #00c7e2;
     color: #121212;
 }
+.sidebar-button.primary:hover {
+    background-color: #00a0b8;
+}
+
 .sidebar-button.secondary {
     background-color: #2a2a2a;
     color: #e0e0e0;
 }
-
+.sidebar-button.secondary:hover {
+    background-color: #383838;
+}
 
 /* -------------------- 聊天区域样式 -------------------- */
 .chat-area {
@@ -72,17 +83,30 @@ body {
     flex-direction: column; /* 垂直堆叠：容器 + 输入框 */
     position: relative;
     padding: 20px;
-    min-height: 0; /* 确保在移动端可以被压缩 */
+    min-height: 0; 
 }
 
 .chat-container {
     flex-grow: 1; /* 占据 chat-area 中间剩余高度 */
     overflow-y: auto;
     padding-right: 10px; 
-    min-height: 0; /* 允许滚动容器在 Flex 布局中正确计算高度 */
+    min-height: 0; 
 }
 
-/* ... (消息、动画和输入区域样式保持不变) ... */
+/* 消息基础样式 */
+.message {
+    padding: 12px 18px; 
+    margin-bottom: 15px;
+    max-width: 80%;
+    border-radius: 20px; 
+    font-size: 0.95em;
+    line-height: 1.5;
+    word-wrap: break-word;
+    animation-duration: 0.5s; 
+    animation-fill-mode: forwards;
+    opacity: 0; 
+}
+/* ... (用户/助手消息/动画样式保持不变) ... */
 
 /* -------------------- 输入区域样式 -------------------- */
 .input-area {
@@ -113,7 +137,10 @@ body {
     color: #121212;
     font-weight: 700;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
+/* ... (错误和加载样式保持不变) ... */
+
 
 /* -------------------- 响应式设计 (手机支持) -------------------- */
 @media (max-width: 768px) {
@@ -128,49 +155,69 @@ body {
         height: 100vh; /* 占据视口全部高度 */
         flex-direction: column; /* 垂直堆叠 */
         max-width: 100%;
+        box-shadow: none; 
+    }
+    
+    /* -------------------- 侧边栏伸缩逻辑 -------------------- */
+    .sidebar {
+        /* **默认折叠状态**：浮动在左侧，宽度为 0 */
+        position: fixed; /* 使用 fixed 保证在滚动时不乱跑 */
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 0; 
+        min-width: 0;
+        overflow: hidden; 
+        padding: 0; 
+        border-right: none;
+        background-color: #191919; 
     }
 
-    /* 侧边栏：水平排列，作为头部，固定高度 */
-    .sidebar {
-        width: 100%;
-        min-width: 100%;
-        padding: 10px 15px;
-        border-right: none;
-        border-bottom: 1px solid #222;
-        flex-direction: row; 
-        align-items: center;
-        justify-content: flex-start; 
-        gap: 10px;
-        flex-shrink: 0; /* 固定高度，不压缩 */
+    /* **展开状态**：通过 JS 添加此类名 */
+    .sidebar.open {
+        width: 250px; 
+        padding: 20px;
+        box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5);
+    }
+    
+    .sidebar.open .logo-text.mini,
+    .sidebar.open .sidebar-button {
+        display: block !important; 
+    }
+    
+    /* -------------------- 聊天区域和按钮逻辑 -------------------- */
+
+    .chat-area {
+        padding: 10px;
+        flex: 1; 
+        overflow: hidden; 
+        min-height: 0; 
+        width: 100%; /* 确保聊天区域占据所有宽度 */
+    }
+    
+    /* 汉堡包按钮：仅在移动端显示 */
+    #toggle-sidebar {
+        display: block !important;
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 501; 
+        padding: 8px 12px;
+        font-size: 1.5em;
+        background-color: transparent;
+        color: #00c7e2;
+        border: 1px solid #00c7e2;
+    }
+    
+    /* 手机端隐藏所有侧边栏按钮 (通过 mobile-hidden) */
+    .sidebar-button.mobile-hidden, 
+    #logout-button {
+        display: none !important; 
     }
     
     .logo-text.mini {
-        margin-bottom: 0;
-        flex-shrink: 0;
         font-size: 1.2em;
-        margin-right: auto; 
-    }
-
-    /* 隐藏 PC 上的新建对话和登出按钮 */
-    .sidebar-button.mobile-hidden {
-        display: none !important; 
-    }
-    /* 登出按钮在手机版总是隐藏 (通过 mobile-hidden) */
-
-    #show-config-button {
-        flex-shrink: 0; 
-        padding: 8px 10px;
         margin-bottom: 0;
-        font-size: 0.9em;
-    }
-    
-    /* 聊天区域调整 - 占据剩余空间 */
-    .chat-area {
-        padding: 10px;
-        flex: 1; /* **关键**：占据 sidebar 和 input-area 之间剩余的所有垂直空间 */
-        overflow: hidden; 
-        min-height: 0; 
-        /* 移除 height: 100%，让 flex: 1 接管高度计算 */
     }
     
     .chat-container {
