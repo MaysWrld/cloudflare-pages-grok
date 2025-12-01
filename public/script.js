@@ -1,4 +1,4 @@
-// public/script.js (最终修复版本)
+// public/script.js (最终优化版)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -71,14 +71,15 @@ function appendMessage(message) {
     const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
     chatContainer.insertBefore(messageEl, sentinel);
     
-    // *** 修复点 3：用户消息发送后，确保用户消息置顶到视口最上方 ***
+    // 滚动逻辑：仅在用户发送消息时强制置顶
     if (message.role === 'user') {
         requestAnimationFrame(() => {
-            // 使用 scrollIntoView({ block: 'start' }) 将用户消息置于视口顶部
+            // 将用户消息置于视口顶部
             messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
-    } else if (message.role === 'assistant' || message.role === 'loading') {
-        // AI 消息和加载消息只需要确保当前消息可见
+    } 
+    // AI 消息和加载消息，只需要确保其在视口内即可（等待 sendMessage 结束后再统一置顶）
+    else if (message.role === 'assistant' || message.role === 'loading') {
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
@@ -97,7 +98,7 @@ function toggleLoadingState(isLoading) {
     }
 
     if (isLoading) {
-        // *** 修复点 4：实现 30 秒倒计时 ***
+        // 实现 30 秒倒计时
         let count = 30;
         
         loadingMessageEl = document.createElement('div');
@@ -107,7 +108,6 @@ function toggleLoadingState(isLoading) {
             loadingMessageEl.innerHTML = `<p>深度思考中，预计 ${count} 秒...</p>`; 
             count--;
             if (count < 0) {
-                 // 倒计时结束，但请求未结束，显示默认文本
                 loadingMessageEl.innerHTML = `<p>深度思考中，请稍候... </p>`;
                 clearInterval(countdownInterval);
             }
@@ -132,17 +132,15 @@ function toggleLoadingState(isLoading) {
     }
 }
 
-// --- 页面初始化和 UI 切换 ---
+// --- 页面初始化和 UI 切换 (保持不变) ---
 
 function toggleAdminButtons(isAdmin) {
-    // 移动端隐藏 class 在 CSS 中处理，这里只处理 display:none 的逻辑
     logoutButton.style.display = isAdmin ? 'block' : 'none'; 
 }
 
 function initPage() {
     document.getElementById('main-view').style.display = 'flex';
     
-    // *** 修复点 2：确保 loginView 在 initPage 中总是明确隐藏 ***
     loginView.style.display = 'none';
 
     const authData = localStorage.getItem('basicAuth');
@@ -154,15 +152,12 @@ function initPage() {
         toggleAdminButtons(false);
     }
     
-    // *** 修复点 2：仅在必要时（已登录）才尝试获取配置更新 Logo，避免触发后端 Basic Auth 提示 ***
     if (basicAuthHeader) {
         fetchConfig(true); 
     }
 }
 
-// --- 事件监听器 ---
-
-// 核心发送消息功能
+// --- 事件监听器 (保持不变) ---
 sendButton.addEventListener('click', sendMessage);
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -170,28 +165,26 @@ messageInput.addEventListener('keypress', (e) => {
         sendMessage();
     }
 });
-
-
 closeLoginButton.addEventListener('click', () => {
     loginView.style.display = 'none';
 });
-
 showConfigButton.addEventListener('click', () => {
     if (basicAuthHeader) {
         adminPanel.style.display = 'flex';
         fetchConfig(); 
     } else {
-        // 只有在点击配置且未登录时，才显示登录框
         loginView.style.display = 'flex';
     }
 });
+
 
 // --- 核心聊天逻辑 ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
 
-    appendMessage({ role: 'user', content: userMessage }); 
+    // 1. 添加用户消息并触发置顶滚动 (已在 appendMessage 中处理)
+    const userMessageEl = appendMessage({ role: 'user', content: userMessage }); 
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
@@ -207,7 +200,6 @@ async function sendMessage() {
             body: JSON.stringify({ messages: conversationHistory }) 
         });
 
-        // 检查是否有 Basic Auth 提示
         if (response.status === 401 && !basicAuthHeader) {
             toggleLoadingState(false);
             appendMessage({ role: 'error', content: '聊天 API 未授权。请联系管理员或检查配置。' });
@@ -239,6 +231,12 @@ async function sendMessage() {
         await typeWriterEffect(textTarget, assistantReply);
         
         conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
+        
+        // *** 修复点 2：AI 回复完成后，将 AI 消息置顶 ***
+        requestAnimationFrame(() => {
+             assistantMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+
     } else {
         const errorMsg = data.message.includes('not configured') 
             ? 'AI 助手尚未配置。请联系管理员进行设置。' 
@@ -248,7 +246,7 @@ async function sendMessage() {
     }
 }
 
-// --- 新建对话功能 ---
+// --- 其他功能 (保持不变) ---
 newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
@@ -257,15 +255,11 @@ newChatButton.addEventListener('click', () => {
     sentinel.classList.add('chat-scroll-sentinel');
     chatContainer.appendChild(sentinel);
 });
-
-
 closeConfigButton.addEventListener('click', () => {
     adminPanel.style.display = 'none';
 });
+// ... (fetchConfig, loginForm, logoutButton, configForm 保持不变) ...
 
-/**
- * 获取配置并填充表单，或仅更新前端 Logo。
- */
 async function fetchConfig(updateLogoOnly = false) {
     if (!basicAuthHeader) {
         return; 
