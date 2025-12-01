@@ -25,7 +25,6 @@ export async function onRequest(context) {
             });
         }
 
-        // 使用 KV 中配置的 AI 端点
         const AI_MODEL_ENDPOINT = config.apiEndpoint; 
 
         // 2. 获取请求体中的消息历史 (用于关联上下文)
@@ -49,8 +48,9 @@ export async function onRequest(context) {
 
         const payload = {
             model: config.model || "gpt-3.5-turbo", // 默认模型
-            // 将 system 指令作为第一条消息，然后是用户/助手的历史消息
             messages: [systemMessage, ...messages], 
+            // *** 新增温度参数 ***
+            temperature: config.temperature !== undefined && config.temperature !== null ? parseFloat(config.temperature) : 0.7,
             // 其他参数...
         };
 
