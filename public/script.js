@@ -1,4 +1,4 @@
-// public/script.js (最终版本，Chat开放，Admin保护，模型输入框)
+// public/script.js (最终版本，新增 Temperature)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -143,13 +143,12 @@ async function sendMessage() {
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
-    // 2. 调用 Chat API (无需认证，API Key/Endpoint 在后端 KV 中读取)
+    // 2. 调用 Chat API 
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                // Chat API 现已开放，无需 Authorization Header
             },
             body: JSON.stringify({ messages: conversationHistory }) 
         });
@@ -225,8 +224,9 @@ async function fetchConfig() {
             document.getElementById('assistant-name').value = config.name || '';
             document.getElementById('api-key').value = config.apiKey || ''; 
             document.getElementById('api-endpoint').value = config.apiEndpoint || '';
-            // *** 使用 input 元素的 ID 'model-name' ***
             document.getElementById('model-name').value = config.model || ''; 
+            // *** 读取 temperature ***
+            document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
             document.getElementById('system-instruction').value = config.systemInstruction || '';
         } else {
             console.error('Failed to fetch config:', data.message);
@@ -242,12 +242,21 @@ configForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!basicAuthHeader) return alert('请先登录管理员账户。');
 
+    const temperatureValue = e.target.temperature.value;
+    
+    // 简单校验 temperature 必须是数字
+    if (isNaN(parseFloat(temperatureValue))) {
+        alert('温度设置必须是一个数字！');
+        return;
+    }
+    
     const configData = {
         name: e.target.name.value,
         apiKey: e.target.apiKey.value, 
         apiEndpoint: e.target.apiEndpoint.value, 
-        // 模型名称通过 input 获取
         model: e.target.model.value,
+        // *** 存储 temperature ***
+        temperature: parseFloat(temperatureValue), 
         systemInstruction: e.target.systemInstruction.value,
     };
 
