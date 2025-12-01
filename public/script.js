@@ -18,17 +18,17 @@ const loginForm = document.getElementById('login-form');
 const configForm = document.getElementById('config-form');
 const adminPanel = document.getElementById('admin-panel');
 const closeConfigButton = document.getElementById('close-config-button');
-const assistantLogo = document.getElementById('assistant-logo'); // 新增: 获取 Logo 元素
+const assistantLogo = document.getElementById('assistant-logo'); 
+const loginView = document.getElementById('login-view'); // 获取整个登录视图
+const closeLoginButton = document.getElementById('close-login-button'); // 新增：获取登录关闭按钮
 
 // 用于显示 AI 正在思考的加载消息的 DOM 元素
 let loadingMessageEl = null; 
 
-// --- 动画和效果函数 ---
+// --- 动画和效果函数 (typeWriterEffect, appendMessage) ---
 
 /**
  * 实现打字机效果
- * @param {HTMLElement} targetElement - 文本将写入的目标元素
- * @param {string} text - 要显示的完整文本 (已包含 <br> 标签)
  */
 function typeWriterEffect(targetElement, text) {
     return new Promise(resolve => {
@@ -36,7 +36,6 @@ function typeWriterEffect(targetElement, text) {
         
         function type() {
             if (i < text.length) {
-                // 如果遇到 <br>，跳过它，并在下次循环中处理
                 if (text.substring(i, i + 4) === '<br>') {
                     targetElement.innerHTML += '<br>';
                     i += 4;
@@ -44,8 +43,7 @@ function typeWriterEffect(targetElement, text) {
                     targetElement.innerHTML += text.charAt(i);
                     i++;
                 }
-                // *** 移除：禁用 AI 消息展示时的自动滚动 ***
-                // chatContainer.scrollTop = chatContainer.scrollHeight; 
+                // 禁用 AI 消息展示时的自动滚动
                 setTimeout(type, TYPING_SPEED_MS); 
             } else {
                 resolve();
@@ -57,8 +55,6 @@ function typeWriterEffect(targetElement, text) {
 
 /**
  * 将消息添加到聊天容器
- * @param {object} message - 包含 role 和 content 的消息对象
- * @returns {HTMLElement} 新创建的消息元素
  */
 function appendMessage(message) {
     const messageEl = document.createElement('div');
@@ -71,20 +67,17 @@ function appendMessage(message) {
         messageEl.innerHTML = `<p>${message.content.replace(/\n/g, '<br>')}</p>`; 
     }
     
-    chatContainer.appendChild(messageEl);
+    // 始终在哨兵之前添加消息
+    const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
+    chatContainer.insertBefore(messageEl, sentinel);
     
-    // *** 变更：如果是用户消息，将其滚动到顶部 ***
+    // *** 变更：用户消息滚动逻辑 ***
     if (message.role === 'user') {
-        // 滚动到顶部，让 AI 有足够的空间显示回复
+        // 将用户消息滚动到屏幕顶部 (滚动到该元素的位置，减去一个顶部边距)
         chatContainer.scrollTo({ top: messageEl.offsetTop - 20, behavior: 'smooth' });
-    } else if (message.role !== 'loading') {
-        // AI 的最终回复不滚动
-        return messageEl;
-    }
-    
-    // 确保其他情况滚动到底部（如加载消息）
-    if (message.role === 'assistant' || message.role === 'error' || message.role === 'loading') {
-         chatContainer.scrollTop = chatContainer.scrollHeight;
+    } else if (message.role === 'assistant' || message.role === 'loading') {
+        // AI 消息和加载消息只需要确保当前消息可见，不需要强制置顶
+        messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
     return messageEl;
@@ -94,16 +87,18 @@ function appendMessage(message) {
 function toggleLoadingState(isLoading) {
     messageInput.disabled = isLoading;
     sendButton.disabled = isLoading;
-    // *** 变更：修改加载文本 ***
     sendButton.textContent = isLoading ? '深度思考30 秒...' : '发送';
 
     if (isLoading) {
         loadingMessageEl = document.createElement('div');
         loadingMessageEl.classList.add('message', 'assistant', 'loading');
-        // *** 变更：修改加载文本 ***
         loadingMessageEl.innerHTML = `<p>深度思考30 秒... <span class="spinner">🧠</span></p>`; 
-        chatContainer.appendChild(loadingMessageEl);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
+        
+        const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
+        chatContainer.insertBefore(loadingMessageEl, sentinel);
+        
+        loadingMessageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
+
     } else {
         if (loadingMessageEl) {
             loadingMessageEl.remove();
@@ -116,14 +111,13 @@ function toggleLoadingState(isLoading) {
 
 function toggleAdminButtons(isAdmin) {
     logoutButton.style.display = isAdmin ? 'block' : 'none';
-    if (document.getElementById('main-view').style.display === 'none' && !isAdmin) {
-        document.getElementById('login-view').style.display = 'flex';
-    }
 }
 
 function initPage() {
+    // *** 变更：主视图始终显示 ***
     document.getElementById('main-view').style.display = 'flex';
-    document.getElementById('login-view').style.display = 'none';
+    // *** 变更：登录视图默认隐藏 ***
+    loginView.style.display = 'none';
 
     const authData = localStorage.getItem('basicAuth');
     if (authData) {
@@ -134,30 +128,38 @@ function initPage() {
         toggleAdminButtons(false);
     }
     
-    // 页面初始化时尝试获取配置，以显示正确的助手名称
     fetchConfig(true);
 }
 
+// --- 事件监听器 ---
 
-sendButton.addEventListener('click', sendMessage);
-messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage();
+// 登录关闭按钮
+closeLoginButton.addEventListener('click', () => {
+    loginView.style.display = 'none';
+});
+
+showConfigButton.addEventListener('click', () => {
+    // *** 变更：根据是否已登录决定显示配置面板还是登录框 ***
+    if (basicAuthHeader) {
+        adminPanel.style.display = 'flex';
+        fetchConfig(); 
+    } else {
+        // 未登录时，显示登录对话框
+        loginView.style.display = 'flex';
     }
 });
 
-// --- 核心聊天逻辑 ---
+// ... (其他事件监听器和登录/配置逻辑保持不变)
+
+// --- 核心聊天逻辑 (保持不变) ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
 
-    // 1. 显示用户消息，并滚动到顶部
     appendMessage({ role: 'user', content: userMessage }); 
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
-    // 2. 启用加载状态
     toggleLoadingState(true);
 
     let response;
@@ -181,22 +183,18 @@ async function sendMessage() {
         return;
     }
 
-    // 3. 关闭加载状态
     toggleLoadingState(false);
     
     if (data.success) {
         const assistantReply = data.reply;
         
-        // 4. 创建 AI 消息元素 (应用展开动画)
         const assistantMessageEl = appendMessage({ role: 'assistant', content: assistantReply });
         const textTarget = assistantMessageEl.querySelector('p');
 
         await new Promise(r => setTimeout(r, 500)); 
 
-        // 5. 使用打印机效果显示文本
         await typeWriterEffect(textTarget, assistantReply);
         
-        // 6. 添加到历史记录
         conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
     } else {
         const errorMsg = data.message.includes('not configured') 
@@ -207,15 +205,17 @@ async function sendMessage() {
     }
 }
 
-// --- 新建对话功能 ---
+// ... (以下代码与上一版本相同，确保完整性) ...
+
 newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
     chatContainer.innerHTML = ''; 
+    const sentinel = document.createElement('div');
+    sentinel.classList.add('chat-scroll-sentinel');
+    chatContainer.appendChild(sentinel);
 });
 
-
-// --- 管理面板交互和配置管理 ---
 
 closeConfigButton.addEventListener('click', () => {
     adminPanel.style.display = 'none';
@@ -223,13 +223,10 @@ closeConfigButton.addEventListener('click', () => {
 
 /**
  * 获取配置并填充表单，或仅更新前端 Logo。
- * @param {boolean} updateLogoOnly - 是否只更新 Logo，不显示面板。
  */
 async function fetchConfig(updateLogoOnly = false) {
-    // 如果不是仅更新 Logo，且未登录，则直接返回
     if (!updateLogoOnly && !basicAuthHeader) return; 
     
-    // 如果仅更新 Logo，不需认证
     const headers = updateLogoOnly && !basicAuthHeader ? {} : { 'Authorization': basicAuthHeader };
 
     try {
@@ -252,13 +249,11 @@ async function fetchConfig(updateLogoOnly = false) {
         if (data.success && data.config) {
             const config = data.config;
             
-            // *** 变更：更新前端助手名称 ***
             if (assistantLogo && config.name) {
                 assistantLogo.textContent = config.name;
             }
 
             if (!updateLogoOnly) {
-                // 填充表单（仅在打开面板时）
                 document.getElementById('assistant-name').value = config.name || '';
                 document.getElementById('api-key').value = config.apiKey || ''; 
                 document.getElementById('api-endpoint').value = config.apiEndpoint || '';
@@ -276,16 +271,51 @@ async function fetchConfig(updateLogoOnly = false) {
     }
 }
 
-showConfigButton.addEventListener('click', () => {
-    if (basicAuthHeader) {
-        adminPanel.style.display = 'flex';
-        fetchConfig(); // 再次调用以确保配置数据最新
-    } else {
-        document.getElementById('login-view').style.display = 'flex';
-        document.getElementById('main-view').style.display = 'none';
+loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const username = e.target.username.value;
+    const password = e.target.password.value;
+    
+    const authString = btoa(`${username}:${password}`);
+    const authHeader = `Basic ${authString}`;
+
+    try {
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': authHeader 
+            },
+            body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            localStorage.setItem('basicAuth', authHeader);
+            basicAuthHeader = authHeader;
+            toggleAdminButtons(true);
+            
+            // 登录成功后，关闭登录视图，打开配置面板
+            loginView.style.display = 'none';
+            adminPanel.style.display = 'flex';
+            fetchConfig();
+
+        } else {
+            alert('登录失败: ' + data.message);
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('登录过程中发生错误。');
     }
 });
 
+logoutButton.addEventListener('click', () => {
+    localStorage.removeItem('basicAuth');
+    basicAuthHeader = null;
+    toggleAdminButtons(false);
+    alert('已登出管理员账户。');
+});
 
 configForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -330,7 +360,6 @@ configForm.addEventListener('submit', async (e) => {
 
         if (data.success) {
             alert('配置保存成功！');
-            // 保存成功后立即更新 Logo
             if (assistantLogo && configData.name) {
                  assistantLogo.textContent = configData.name;
             }
