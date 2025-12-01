@@ -76,6 +76,12 @@
                         <input type="text" id="model-name" name="model" placeholder="例如：grok-4" required>
                         <small>请填写 AI 服务要求使用的准确模型名称。</small>
                     </div>
+
+                    <div class="input-group">
+                        <label for="temperature">温度设置 (Temperature)</label>
+                        <input type="number" id="temperature" name="temperature" step="0.01" min="0" max="2" value="0.7" required>
+                        <small>控制回复的随机性。值越高越有创造力 (通常 0.0 到 1.0)。</small>
+                    </div>
                     
                     <div class="input-group">
                         <label for="system-instruction">风格指令 (System Instruction)</label>
