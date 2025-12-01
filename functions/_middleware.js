@@ -21,15 +21,15 @@ function checkAuth(request, env) {
     return username === env.ADMIN_USERNAME && password === env.ADMIN_PASSWORD;
 }
 
-// 路由中间件，保护所有 /api/ 路径
+// 路由中间件，只保护 /api/config 路径
 export async function onRequest({ request, next, env }) {
     const url = new URL(request.url);
 
-    // 排除 /api/login 路径，其他 /api/* 路径都需要认证
-    if (url.pathname !== '/api/login' && url.pathname.startsWith('/api/')) {
+    // 只有 /api/config 路径需要认证
+    if (url.pathname.startsWith('/api/config')) {
         if (!checkAuth(request, env)) {
             // 返回 401 Unauthorized 响应
-            return new Response('Unauthorized.', {
+            return new Response('Unauthorized. Admin access required.', {
                 status: 401,
                 headers: {
                     // 提示浏览器弹出登录框
@@ -40,6 +40,6 @@ export async function onRequest({ request, next, env }) {
         }
     }
     
-    // 如果通过认证或不是受保护的路径，则继续执行下一个处理函数
+    // /api/login, /api/chat, 和静态文件都通过 (开放)
     return next();
 }
