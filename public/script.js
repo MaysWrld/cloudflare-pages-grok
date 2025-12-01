@@ -1,9 +1,11 @@
-// public/script.js (最终版本，新增 Temperature 和 Loading State)
+// public/script.js (最终版本，高级动画和打印机效果)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
 // 存储 Basic Auth 头部，仅用于 Admin API 调用
 let basicAuthHeader = null; 
+// 打印机效果速度（设置为最快）
+const TYPING_SPEED_MS = 1; // 1毫秒/字符
 
 // --- DOM 元素获取 ---
 const chatContainer = document.getElementById('chat-container');
@@ -20,39 +22,55 @@ const closeConfigButton = document.getElementById('close-config-button');
 // 用于显示 AI 正在思考的加载消息的 DOM 元素
 let loadingMessageEl = null; 
 
-// --- 页面初始化和 UI 切换 ---
+// --- 动画和效果函数 ---
 
-function toggleAdminButtons(isAdmin) {
-    // 只有登录成功后，才显示配置管理和登出按钮
-    logoutButton.style.display = isAdmin ? 'block' : 'none';
-    // 确保 chat/login 视图正确切换
-    if (document.getElementById('main-view').style.display === 'none' && !isAdmin) {
-        document.getElementById('login-view').style.display = 'flex';
-    }
+/**
+ * 实现打字机效果
+ * @param {HTMLElement} targetElement - 文本将写入的目标元素
+ * @param {string} text - 要显示的完整文本
+ */
+function typeWriterEffect(targetElement, text) {
+    return new Promise(resolve => {
+        const fullText = text.replace(/\n/g, '<br>');
+        let i = 0;
+        
+        function type() {
+            if (i < fullText.length) {
+                // 每次显示一个字符
+                targetElement.innerHTML += fullText.charAt(i);
+                i++;
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                setTimeout(type, TYPING_SPEED_MS); 
+            } else {
+                resolve();
+            }
+        }
+        type();
+    });
 }
 
-function initPage() {
-    // 聊天界面 (main-view) 始终可见
-    document.getElementById('main-view').style.display = 'flex';
-    document.getElementById('login-view').style.display = 'none';
+/**
+ * 将消息添加到聊天容器
+ * @param {object} message - 包含 role 和 content 的消息对象
+ * @returns {HTMLElement} 新创建的消息元素
+ */
+function appendMessage(message) {
+    const messageEl = document.createElement('div');
+    messageEl.classList.add('message', message.role);
 
-    // 检查是否有存储的 Admin 凭证
-    const authData = localStorage.getItem('basicAuth');
-    if (authData) {
-        basicAuthHeader = authData;
-        toggleAdminButtons(true);
+    // AI 消息需要额外的类用于 CSS 展开动画
+    if (message.role === 'assistant') {
+        messageEl.classList.add('animate-in');
+        // AI 消息的内容初始为空，等待打字机效果填充
+        messageEl.innerHTML = `<p></p>`;
     } else {
-        basicAuthHeader = null;
-        toggleAdminButtons(false);
+        // 用户消息直接显示内容，依赖 CSS 动画
+        messageEl.innerHTML = `<p>${message.content.replace(/\n/g, '<br>')}</p>`; 
     }
-
-    // 初始欢迎语
-    if (conversationHistory.length === 0) {
-        appendMessage({ 
-            role: 'assistant', 
-            content: `你好，我是你的专属 AI 助手，请开始提问吧！` 
-        });
-    }
+    
+    chatContainer.appendChild(messageEl);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+    return messageEl;
 }
 
 // --- 加载状态管理 ---
@@ -66,7 +84,7 @@ function toggleLoadingState(isLoading) {
     sendButton.textContent = isLoading ? '思考中...' : '发送';
 
     if (isLoading) {
-        // 创建并显示加载消息
+        // 创建并显示加载消息 (具有呼吸动画)
         loadingMessageEl = document.createElement('div');
         loadingMessageEl.classList.add('message', 'assistant', 'loading');
         loadingMessageEl.innerHTML = `<p>正在思考... <span class="spinner">🧠</span></p>`; 
@@ -81,79 +99,41 @@ function toggleLoadingState(isLoading) {
     }
 }
 
-// --- 登录/登出 (仅用于 Admin 权限) ---
+// --- 页面初始化和 UI 切换 (保持不变) ---
 
-showConfigButton.addEventListener('click', () => {
-    // 如果已登录，则直接打开配置面板
-    if (basicAuthHeader) {
-        adminPanel.style.display = 'flex';
-        fetchConfig(); 
-    } else {
-        // 如果未登录，显示登录表单
+function toggleAdminButtons(isAdmin) {
+    logoutButton.style.display = isAdmin ? 'block' : 'none';
+    if (document.getElementById('main-view').style.display === 'none' && !isAdmin) {
         document.getElementById('login-view').style.display = 'flex';
-        document.getElementById('main-view').style.display = 'none';
     }
-});
-
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = e.target.username.value;
-    const password = e.target.password.value;
-    
-    const authString = btoa(`${username}:${password}`);
-    const authHeader = `Basic ${authString}`;
-
-    try {
-        // 调用 /api/login 验证凭证
-        const response = await fetch('/api/login', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': authHeader // 使用 Auth 头部进行验证
-            },
-            body: JSON.stringify({ username, password })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            // 登录成功，保存 Auth 头部，并切换回主界面，显示 Admin 按钮
-            localStorage.setItem('basicAuth', authHeader);
-            basicAuthHeader = authHeader;
-            toggleAdminButtons(true);
-            
-            // 自动打开配置面板
-            document.getElementById('login-view').style.display = 'none';
-            document.getElementById('main-view').style.display = 'flex';
-            adminPanel.style.display = 'flex';
-            fetchConfig();
-
-        } else {
-            alert('登录失败: ' + data.message);
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        alert('登录过程中发生错误。');
-    }
-});
-
-logoutButton.addEventListener('click', () => {
-    localStorage.removeItem('basicAuth');
-    basicAuthHeader = null;
-    toggleAdminButtons(false);
-    alert('已登出管理员账户。');
-});
-
-
-// --- 对话功能 (现在是开放的) ---
-
-function appendMessage(message) {
-    const messageEl = document.createElement('div');
-    messageEl.classList.add('message', message.role);
-    messageEl.innerHTML = `<p>${message.content.replace(/\n/g, '<br>')}</p>`; 
-    chatContainer.appendChild(messageEl);
-    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
+
+function initPage() {
+    document.getElementById('main-view').style.display = 'flex';
+    document.getElementById('login-view').style.display = 'none';
+
+    const authData = localStorage.getItem('basicAuth');
+    if (authData) {
+        basicAuthHeader = authData;
+        toggleAdminButtons(true);
+    } else {
+        basicAuthHeader = null;
+        toggleAdminButtons(false);
+    }
+
+    if (conversationHistory.length === 0) {
+        // 初始消息直接显示，不需要动画
+        const welcomeEl = appendMessage({ 
+            role: 'assistant', 
+            content: `你好，我是你的专属 AI 助手，请开始提问吧！` 
+        });
+        // 移除初始消息的动画类，让它直接可见
+        welcomeEl.classList.remove('animate-in'); 
+        welcomeEl.style.opacity = 1;
+        welcomeEl.style.width = 'auto'; 
+    }
+}
+
 
 sendButton.addEventListener('click', sendMessage);
 messageInput.addEventListener('keypress', (e) => {
@@ -163,88 +143,100 @@ messageInput.addEventListener('keypress', (e) => {
     }
 });
 
+// --- 核心聊天逻辑 ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
 
     // 1. 显示用户消息，并添加到历史记录
-    appendMessage({ role: 'user', content: userMessage });
+    // appendMessage 现在会自动应用 CSS 漂移动画
+    appendMessage({ role: 'user', content: userMessage }); 
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
 
-    // 2. 启用加载状态
+    // 2. 启用加载状态 (显示呼吸动画)
     toggleLoadingState(true);
 
     // 3. 调用 Chat API 
+    let response;
+    let data;
+
     try {
-        const response = await fetch('/api/chat', {
+        response = await fetch('/api/chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ messages: conversationHistory }) 
         });
 
-        const data = await response.json();
-
-        // 4. 关闭加载状态
-        toggleLoadingState(false);
-        
-        if (data.success) {
-            const assistantReply = data.reply;
-            // 5. 显示 AI 助手回复，并添加到历史记录
-            appendMessage({ role: 'assistant', content: assistantReply });
-            conversationHistory.push({ role: 'assistant', content: assistantReply });
-        } else {
-            // 如果是 503 配置错误，给予用户提示
-            const errorMsg = data.message.includes('not configured') 
-                ? 'AI 助手尚未配置。请联系管理员进行设置。' 
-                : data.message;
-            appendMessage({ role: 'error', content: `[Error] ${errorMsg}` });
-            conversationHistory.pop(); 
-        }
-
+        data = await response.json();
     } catch (error) {
         console.error('Chat error:', error);
-        // 4. 关闭加载状态
         toggleLoadingState(false);
         appendMessage({ role: 'error', content: `与 AI 服务通信失败：${error.message}` });
         if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
              conversationHistory.pop(); 
         }
+        return;
+    }
+
+    // 4. 关闭加载状态
+    toggleLoadingState(false);
+    
+    if (data.success) {
+        const assistantReply = data.reply;
+        
+        // 5. 创建 AI 消息元素 (应用展开动画)
+        const assistantMessageEl = appendMessage({ role: 'assistant', content: assistantReply });
+        const textTarget = assistantMessageEl.querySelector('p');
+
+        // 6. 等待 CSS 展开动画完成 (可选，但推荐)
+        await new Promise(r => setTimeout(r, 500)); 
+
+        // 7. 使用打印机效果显示文本
+        await typeWriterEffect(textTarget, assistantReply);
+        
+        // 8. 添加到历史记录
+        conversationHistory.push({ role: 'assistant', content: assistantReply });
+    } else {
+        const errorMsg = data.message.includes('not configured') 
+            ? 'AI 助手尚未配置。请联系管理员进行设置。' 
+            : data.message;
+        appendMessage({ role: 'error', content: `[Error] ${errorMsg}` });
+        conversationHistory.pop(); 
     }
 }
 
-// --- 新建对话功能 ---
+// --- 新建对话功能 (保持不变) ---
 newChatButton.addEventListener('click', () => {
-    // 确保在重置时没有加载状态
     toggleLoadingState(false); 
     conversationHistory = []; 
     chatContainer.innerHTML = ''; 
-    // 重新初始化欢迎语
-    appendMessage({ 
+    
+    // 重新初始化欢迎语 (确保没有动画)
+    const welcomeEl = appendMessage({ 
         role: 'assistant', 
         content: "新的对话已开始，上下文已重置。请问有什么可以帮忙的？" 
     });
+    welcomeEl.classList.remove('animate-in'); 
+    welcomeEl.style.opacity = 1;
+    welcomeEl.style.width = 'auto'; 
 });
 
 
-// --- 管理面板交互和配置管理 (需要认证) ---
+// --- 管理面板交互和配置管理 (保持不变) ---
 
 closeConfigButton.addEventListener('click', () => {
     adminPanel.style.display = 'none';
 });
 
-// 获取配置并填充表单
+// 获取配置并填充表单 (保持不变)
 async function fetchConfig() {
-    if (!basicAuthHeader) return; // 确保只有登录用户才能获取
+    if (!basicAuthHeader) return; 
 
     try {
         const response = await fetch('/api/config', {
             method: 'GET',
-            headers: {
-                'Authorization': basicAuthHeader // 必须使用 Basic Auth
-            }
+            headers: { 'Authorization': basicAuthHeader }
         });
         
         if (response.status === 401) {
@@ -275,14 +267,13 @@ async function fetchConfig() {
     }
 }
 
-// 提交配置表单
+// 提交配置表单 (保持不变)
 configForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!basicAuthHeader) return alert('请先登录管理员账户。');
 
     const temperatureValue = e.target.temperature.value;
     
-    // 简单校验 temperature 必须是数字
     if (isNaN(parseFloat(temperatureValue))) {
         alert('温度设置必须是一个数字！');
         return;
