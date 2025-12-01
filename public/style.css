@@ -1,240 +1,241 @@
-/* ---------------------------------------------------- */
-/* Global & Utilities - 模仿 Grok 的深色主题和字体 */
-/* ---------------------------------------------------- */
-
-:root {
-    --bg-color: #000000;
-    --card-color: #0a0a0a;
-    --text-color: #e0e0e0;
-    --primary-color: #4CAF50; /* 强调色：霓虹绿 */
-    --secondary-color: #333333;
-    --border-radius: 8px;
-    --font-family: 'Roboto Mono', monospace;
-    --glow-effect: 0 0 5px var(--primary-color), 0 0 10px var(--primary-color);
-}
-
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
-
+/* -------------------- 基础样式 (Grok 风格) -------------------- */
 body {
-    background-color: var(--bg-color);
-    color: var(--text-color);
-    font-family: var(--font-family);
+    font-family: 'Roboto Mono', monospace;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    overflow: hidden; /* 防止滚动条影响整体视觉 */
 }
-
-/* 霓虹标题 */
-.logo-text, .neon-title {
-    font-size: 2.5rem;
-    font-weight: 700;
-    color: var(--primary-color);
-    text-shadow: var(--glow-effect);
-    margin-bottom: 20px;
-}
-
-.logo-text.mini {
-    font-size: 1.5rem;
-    margin-bottom: 30px;
-    padding: 10px;
-    text-align: center;
-}
-
-/* Card 基础样式 (登录/配置面板) */
-.card {
-    background: var(--card-color);
-    border-radius: var(--border-radius);
-    padding: 40px;
-    box-shadow: var(--glow-effect); /* 突出卡片 */
-    border: 1px solid var(--primary-color);
-    max-width: 450px;
-    width: 90%;
-}
-
-/* Form 元素 */
-input, textarea, select {
-    width: 100%;
-    padding: 12px;
-    margin-bottom: 15px;
-    border: 1px solid var(--secondary-color);
-    background-color: #111;
-    color: var(--text-color);
-    border-radius: 4px;
-    transition: all 0.3s ease;
-    font-family: var(--font-family);
-}
-
-input:focus, textarea:focus, select:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 3px var(--primary-color);
-}
-
-textarea {
-    resize: vertical;
-    min-height: 80px;
-}
-
-.input-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-size: 0.9em;
-    color: var(--primary-color);
-}
-
-/* 按钮样式 */
-.submit-button, .send-button, .sidebar-button {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 4px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.3s, transform 0.1s, box-shadow 0.3s;
-    font-family: var(--font-family);
-}
-
-.submit-button, .send-button {
-    background-color: var(--primary-color);
-    color: var(--bg-color);
-    box-shadow: var(--glow-effect);
-}
-
-.submit-button:hover, .send-button:hover {
-    background-color: #5cb85c;
-    box-shadow: 0 0 8px var(--primary-color);
-}
-
-/* ---------------------------------------------------- */
-/* Layout - Main View */
-/* ---------------------------------------------------- */
 
 #main-view {
     display: flex;
     width: 100%;
+    max-width: 1400px;
     height: 100%;
-}
-
-/* Sidebar */
-.sidebar {
-    width: 250px;
-    background-color: var(--card-color);
-    padding: 20px;
-    border-right: 1px solid var(--secondary-color);
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.sidebar-button {
-    background: none;
-    border: 1px solid var(--secondary-color);
-    color: var(--text-color);
-    text-align: left;
-    padding: 10px 15px;
-}
-
-.sidebar-button.primary {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-    box-shadow: var(--glow-effect);
-}
-
-.sidebar-button:hover {
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     background-color: #1a1a1a;
 }
 
-/* Chat Area */
+.sidebar {
+    width: 250px;
+    background-color: #191919;
+    padding: 20px;
+    border-right: 1px solid #222;
+    display: flex;
+    flex-direction: column;
+}
+
+.logo-text {
+    color: #00c7e2;
+    font-size: 1.8em;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+.logo-text.mini {
+    font-size: 1.4em;
+    margin-bottom: 30px;
+}
+
+.sidebar-button {
+    padding: 12px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Roboto Mono', monospace;
+    transition: background-color 0.3s;
+}
+
+.sidebar-button.primary {
+    background-color: #00c7e2;
+    color: #121212;
+}
+.sidebar-button.primary:hover {
+    background-color: #00a0b8;
+}
+
+.sidebar-button.secondary {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+.sidebar-button.secondary:hover {
+    background-color: #383838;
+}
+
+/* -------------------- 聊天区域样式 -------------------- */
 .chat-area {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
+    position: relative;
     padding: 20px;
-    max-width: 1000px;
-    margin: 0 auto; /* 居中聊天区域 */
-    width: 100%;
 }
 
 .chat-container {
     flex-grow: 1;
     overflow-y: auto;
-    padding-right: 10px; /* 留出滚动条空间 */
+    padding-right: 10px; /* 滚动条留白 */
 }
 
-/* 消息样式 */
+/* 消息基础样式 */
 .message {
-    padding: 15px;
+    padding: 10px 15px;
     margin-bottom: 15px;
-    border-radius: var(--border-radius);
-    max-width: 85%;
-    line-height: 1.6;
+    max-width: 80%;
+    border-radius: 8px;
+    font-size: 0.95em;
+    line-height: 1.5;
     word-wrap: break-word;
+    animation-duration: 0.5s; /* 统一动画时长 */
+    animation-fill-mode: forwards;
+    opacity: 0; /* 默认隐藏，等待 JS/CSS 动画显示 */
 }
 
 .message p {
     margin: 0;
 }
 
-/* 用户消息 */
+/* 用户消息 (右侧) */
 .message.user {
-    background-color: #212121;
+    background-color: #007bff; /* 蓝色 */
+    color: white;
     margin-left: auto;
-    border: 1px solid #3d3d3d;
+    border-bottom-right-radius: 2px;
 }
 
-/* 助手消息 */
+/* AI 助手消息 (左侧) */
 .message.assistant {
-    background-color: #1a1a1a;
-    border-left: 3px solid var(--primary-color);
-    box-shadow: 0 0 3px rgba(76, 175, 80, 0.5); /* 霓虹绿的轻微阴影 */
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+    margin-right: auto;
+    border-bottom-left-radius: 2px;
+    /* 默认宽度为 0，用于展开动画 */
+    width: 0;
+    padding: 10px 0; /* 隐藏内容 padding */
+    overflow: hidden; 
 }
 
-.message.error {
-    background-color: #5c1818;
-    color: #ffcccc;
-    border-left: 3px solid #ff4444;
+/* AI 消息展开动画 */
+@keyframes expand-message {
+    to {
+        width: auto;
+        padding: 10px 15px;
+        opacity: 1;
+        max-width: 80%;
+    }
+}
+.message.assistant.animate-in {
+    animation-name: expand-message;
+    animation-timing-function: ease-out;
 }
 
-/* 输入区域 */
+
+/* -------------------- 高级动画效果 -------------------- */
+
+/* 1. 用户消息漂移效果 */
+@keyframes fade-in-up {
+    0% {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+.message.user {
+    animation-name: fade-in-up;
+    animation-delay: 0.1s; /* 略微延迟，避免与输入框动画冲突 */
+}
+
+/* 2. AI 正在思考 (加载) 消息 - 呼吸动画 */
+@keyframes pulse {
+    0% { background-color: #2a2a2a; border-left-color: #00c7e280; }
+    50% { background-color: #383838; border-left-color: #00c7e2; }
+    100% { background-color: #2a2a2a; border-left-color: #00c7e280; }
+}
+
+.message.assistant.loading {
+    /* 覆盖基础样式，确保是左侧展开 */
+    margin-right: auto;
+    background-color: #2a2a2a;
+    border-left: 3px solid #00c7e2;
+    color: #ccc;
+    font-style: italic;
+    
+    /* 应用呼吸动画 */
+    animation-name: pulse;
+    animation-duration: 2s;
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+
+    /* 加载消息也应用展开动画，并保持不隐藏 */
+    width: auto;
+    opacity: 1;
+    padding: 10px 15px;
+}
+
+/* 隐藏加载消息中的默认 spinner，因为我们用文本提示 */
+.message.assistant.loading .spinner {
+    display: none;
+}
+
+
+/* -------------------- 输入区域样式 -------------------- */
 .input-area {
     display: flex;
-    gap: 10px;
     padding-top: 20px;
-    border-top: 1px solid var(--secondary-color);
+    border-top: 1px solid #222;
 }
 
 #message-input {
     flex-grow: 1;
-    height: 50px;
-    min-height: 50px;
-    max-height: 200px;
-    margin-bottom: 0;
-    /* 模仿 Grok 风格，使用高亮边框 */
-    border: 1px solid var(--primary-color);
-    box-shadow: var(--glow-effect);
+    padding: 15px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    background-color: #222;
+    color: #e0e0e0;
+    font-family: 'Roboto Mono', monospace;
+    resize: none;
+    max-height: 150px;
+}
+#message-input:focus {
+    border-color: #00c7e2;
+    outline: none;
 }
 
 .send-button {
-    width: 100px;
-    padding: 10px;
-    height: 50px;
-    margin-bottom: 0;
-    box-shadow: none; /* 仅在 hover 时有 glow */
+    padding: 15px 25px;
+    margin-left: 10px;
+    border: none;
+    border-radius: 8px;
+    background-color: #00c7e2;
+    color: #121212;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.send-button:hover:enabled {
+    background-color: #00a0b8;
+}
+.send-button:disabled {
+    background-color: #3a3a3a;
+    cursor: not-allowed;
+    color: #666;
 }
 
-.send-button:hover {
-    box-shadow: var(--glow-effect);
+/* -------------------- 错误和管理面板样式 -------------------- */
+.message.error {
+    background-color: #440000;
+    border-left: 3px solid red;
+    color: #ffcccc;
+    margin-right: auto;
+    font-style: italic;
+    opacity: 1;
 }
-
-/* ---------------------------------------------------- */
-/* Modal Overlay & Admin Panel */
-/* ---------------------------------------------------- */
 
 .modal-overlay {
     position: fixed;
@@ -242,52 +243,101 @@ textarea {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.85); /* 几乎全黑的半透明背景 */
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 1000;
 }
 
+.card {
+    background-color: #1a1a1a;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+.login-card {
+    width: 350px;
+    text-align: center;
+}
+
 .admin-card {
-    position: relative;
-    max-width: 600px;
     width: 90%;
+    max-width: 600px;
+    position: relative;
+}
+
+.neon-title {
+    color: #00c7e2;
+    text-shadow: 0 0 5px #00c7e280;
+    margin-top: 0;
+    margin-bottom: 25px;
 }
 
 .close-button {
     position: absolute;
     top: 15px;
-    right: 25px;
-    font-size: 30px;
-    color: var(--primary-color);
+    right: 20px;
+    font-size: 2em;
+    color: #888;
     cursor: pointer;
-    transition: color 0.2s;
+    transition: color 0.3s;
 }
-
 .close-button:hover {
-    color: #fff;
-    text-shadow: 0 0 5px #fff;
+    color: #e0e0e0;
 }
 
-/* 调整配置表单的按钮样式 */
-#config-form .submit-button {
-    margin-top: 20px;
+.input-group {
+    margin-bottom: 20px;
 }
 
-/* ---------------------------------------------------- */
-/* Scrollbar Styling (Webkit Browsers) */
-/* ---------------------------------------------------- */
-.chat-container::-webkit-scrollbar {
-    width: 8px;
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ccc;
+    font-weight: 700;
 }
 
-.chat-container::-webkit-scrollbar-thumb {
-    background-color: var(--primary-color);
-    border-radius: 10px;
-    box-shadow: var(--glow-effect);
+.input-group input[type="text"],
+.input-group input[type="password"],
+.input-group input[type="url"],
+.input-group input[type="number"],
+.input-group textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background-color: #222;
+    color: #e0e0e0;
+    font-family: 'Roboto Mono', monospace;
+    box-sizing: border-box;
 }
 
-.chat-container::-webkit-scrollbar-track {
-    background: #1a1a1a;
+.input-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.input-group small {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8em;
+    color: #999;
+}
+
+.submit-button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    background-color: #00c7e2;
+    color: #121212;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.submit-button:hover {
+    background-color: #00a0b8;
 }
