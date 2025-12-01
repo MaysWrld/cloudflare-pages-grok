@@ -9,7 +9,8 @@
 </head>
 <body>
 
-    <div id="login-view" class="modal-overlay" style="display: none;"> <div class="card login-card">
+    <div id="login-view" class="modal-overlay" style="display: none;"> 
+        <div class="card login-card">
             <h1 class="logo-text">Admin Login</h1>
             <span id="close-login-button" class="close-button">&times;</span>
             <p>请登录以管理 AI 助手配置。</p>
@@ -25,14 +26,12 @@
         
         <div class="sidebar">
             <div id="assistant-logo" class="logo-text mini">AI Assistant</div>
-            <button id="new-chat-button" class="sidebar-button primary">
-                + 新建对话 (Reset Context)
+            <button id="new-chat-button" class="sidebar-button primary mobile-hidden"> + 新建对话 (Reset Context)
             </button>
             <button id="show-config-button" class="sidebar-button secondary">
                 ⚙️ 配置管理
             </button>
-            <button id="logout-button" class="sidebar-button secondary" style="display: none;">
-                🚪 登出
+            <button id="logout-button" class="sidebar-button secondary mobile-hidden" style="display: none;"> 🚪 登出
             </button>
         </div>
 
@@ -57,7 +56,7 @@
                         <label for="assistant-name">助手名称 (Assistant Name)</label>
                         <input type="text" id="assistant-name" name="name" placeholder="例如：Grok 模仿者" required>
                     </div>
-
+                    
                     <div class="input-group">
                         <label for="api-endpoint">AI API 端点 (Endpoint URL)</label>
                         <input type="url" id="api-endpoint" name="apiEndpoint" 
