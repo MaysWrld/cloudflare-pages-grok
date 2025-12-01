@@ -153,9 +153,12 @@ body {
 
 /* 2. AI 正在思考 (加载) 消息 - 呼吸动画 */
 @keyframes pulse {
-    0% { background-color: #2a2a2a; border-left-color: #00c7e280; }
-    50% { background-color: #383838; border-left-color: #00c7e2; }
-    100% { background-color: #2a2a2a; border-left-color: #00c7e280; }
+    /* 加载动画开始：深色背景，柔和的边框 */
+    0% { background-color: #202020; border-left-color: #00c7e250; } 
+    /* 50%：浅色背景，高亮的边框 */
+    50% { background-color: #333333; border-left-color: #00c7e2; }
+    /* 100%：返回深色背景 */
+    100% { background-color: #202020; border-left-color: #00c7e250; } 
 }
 
 .message.assistant.loading {
@@ -168,7 +171,7 @@ body {
     
     /* 应用呼吸动画 */
     animation-name: pulse;
-    animation-duration: 2s;
+    animation-duration: 1.5s; /* 略微加快速度，使其更明显 */
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
 
