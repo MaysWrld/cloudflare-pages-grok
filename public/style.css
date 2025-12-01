@@ -40,6 +40,15 @@ body {
     margin-bottom: 30px;
 }
 
+/* 默认隐藏在移动端收缩的按钮 */
+.sidebar-button.mobile-hidden {
+    display: block; 
+}
+#logout-button.mobile-hidden {
+    display: none !important;
+}
+
+
 .sidebar-button {
     padding: 12px;
     margin-bottom: 10px;
@@ -363,6 +372,7 @@ body {
         max-width: 100%;
     }
 
+    /* 侧边栏：水平排列，收缩功能按钮 */
     .sidebar {
         width: 100%;
         min-width: 100%;
@@ -371,24 +381,29 @@ body {
         border-bottom: 1px solid #222;
         flex-direction: row; 
         align-items: center;
-        justify-content: space-between;
+        justify-content: flex-start; /* 保持 Logo 和配置在左侧 */
         gap: 10px;
     }
     
     .logo-text.mini {
         margin-bottom: 0;
+        flex-shrink: 0;
         font-size: 1.2em;
+        margin-right: auto; /* Logo 和配置管理之间拉开距离 */
     }
 
-    .sidebar-button {
+    /* 修复点 1：隐藏手机端的新建对话和登出按钮 */
+    .sidebar-button.mobile-hidden, 
+    #logout-button {
+        display: none !important; 
+    }
+    
+    /* 配置按钮在手机端始终显示 */
+    #show-config-button {
         flex-shrink: 0; 
         padding: 8px 10px;
         margin-bottom: 0;
         font-size: 0.9em;
-    }
-    
-    #logout-button {
-        display: none !important; 
     }
     
     .chat-area {
