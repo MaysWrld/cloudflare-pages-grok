@@ -51,29 +51,38 @@
                 <h2 class="neon-title">⚙️ AI 助手配置</h2>
                 <span id="close-config-button" class="close-button">&times;</span>
                 <form id="config-form">
+                    
                     <div class="input-group">
-                        <label for="assistant-name">助手名称</label>
+                        <label for="assistant-name">助手名称 (Assistant Name)</label>
                         <input type="text" id="assistant-name" name="name" placeholder="例如：Grok 模仿者" required>
                     </div>
-                    <div class="input-group">
-                        <label for="api-key">API Key</label>
-                        <input type="password" id="api-key" name="apiKey" placeholder="例如：sk-xxxxxxxxxxxx" required>
-                    </div>
+
                     <div class="input-group">
                         <label for="api-endpoint">AI API 端点 (Endpoint URL)</label>
-                        <input type="url" id="api-endpoint" name="apiEndpoint" placeholder="例如：https://api.openai.com/v1/chat/completions" required>
+                        <input type="url" id="api-endpoint" name="apiEndpoint" 
+                               placeholder="例如：https://api.x.ai/v1/chat/completions" 
+                               required>
+                        <small>填写完整的 POST 请求 URL，例如 X.ai 的 Chat Completions 端点。</small>
                     </div>
+                    
                     <div class="input-group">
-                        <label for="model-select">模型选择</label>
-                        <select id="model-select" name="model">
-                            <option value="gpt-4o">GPT-4o (示例)</option>
-                            <option value="gemini-2.5-flash">Gemini 2.5 Flash (示例)</option>
-                            </select>
+                        <label for="api-key">API Key (认证密钥)</label>
+                        <input type="password" id="api-key" name="apiKey" placeholder="例如：您的 XAI_API_KEY" required>
+                        <small>请填写用于 Bearer 认证的密钥/Token。</small>
                     </div>
+                    
+                    <div class="input-group">
+                        <label for="model-name">模型名称 (Model Name)</label>
+                        <input type="text" id="model-name" name="model" placeholder="例如：grok-4" required>
+                        <small>请填写 AI 服务要求使用的准确模型名称。</small>
+                    </div>
+                    
                     <div class="input-group">
                         <label for="system-instruction">风格指令 (System Instruction)</label>
                         <textarea id="system-instruction" name="systemInstruction" placeholder="定义 AI 助手的风格，例如：你是一个幽默风趣、说话简洁的 AI 助手。" required></textarea>
+                        <small>此指令将作为 System 消息发送给 AI。</small>
                     </div>
+
                     <button type="submit" class="submit-button">保存配置</button>
                 </form>
             </div>
