@@ -11,7 +11,8 @@
 
     <div id="login-view">
         <div class="card login-card">
-            <h1 class="logo-text">AI Assistant Login</h1>
+            <h1 class="logo-text">Admin Login</h1>
+            <p>请登录以管理 AI 助手配置。</p>
             <form id="login-form">
                 <input type="text" id="username" name="username" placeholder="用户名 (Admin Username)" required>
                 <input type="password" id="password" name="password" placeholder="密码 (Password)" required>
@@ -30,7 +31,7 @@
             <button id="show-config-button" class="sidebar-button secondary">
                 ⚙️ 配置管理
             </button>
-            <button id="logout-button" class="sidebar-button secondary">
+            <button id="logout-button" class="sidebar-button secondary" style="display: none;">
                 🚪 登出
             </button>
         </div>
@@ -57,6 +58,10 @@
                     <div class="input-group">
                         <label for="api-key">API Key</label>
                         <input type="password" id="api-key" name="apiKey" placeholder="例如：sk-xxxxxxxxxxxx" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="api-endpoint">AI API 端点 (Endpoint URL)</label>
+                        <input type="url" id="api-endpoint" name="apiEndpoint" placeholder="例如：https://api.openai.com/v1/chat/completions" required>
                     </div>
                     <div class="input-group">
                         <label for="model-select">模型选择</label>
