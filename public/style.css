@@ -4,22 +4,21 @@ body {
     background-color: #121212;
     color: #e0e0e0;
     margin: 0;
-    /* 移除 PC 端的 flex 居中，让手机端能够使用 100vh */
     height: 100vh;
-    display: flex; 
+    display: flex;
     justify-content: center;
-    align-items: center; 
+    align-items: center;
 }
 
 #main-view {
     display: flex;
     width: 100%;
-    max-width: 1400px;
-    height: 100%;
+    max-width: 1400px; /* PC 最大宽度 */
+    height: 100%; /* PC 高度继承自 body */
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
     background-color: #1a1a1a;
 }
-/* ... (侧边栏样式保持不变) ... */
+
 .sidebar {
     width: 250px;
     min-width: 180px; 
@@ -28,52 +27,139 @@ body {
     border-right: 1px solid #222;
     display: flex;
     flex-direction: column; 
+    flex-shrink: 0; /* 阻止侧边栏被压缩 */
 }
-/* ... (其他 PC 样式保持不变) ... */
+
+.logo-text {
+    color: #00c7e2;
+    font-size: 1.8em;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+.logo-text.mini {
+    font-size: 1.4em;
+    margin-bottom: 30px;
+}
+
+/* 默认情况下，移动端隐藏的按钮在 PC 上显示 */
+.sidebar-button.mobile-hidden {
+    display: block; 
+}
+
+.sidebar-button {
+    padding: 12px;
+    margin-bottom: 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Roboto Mono', monospace;
+    transition: background-color 0.3s;
+}
+
+.sidebar-button.primary {
+    background-color: #00c7e2;
+    color: #121212;
+}
+.sidebar-button.primary:hover {
+    background-color: #00a0b8;
+}
+
+.sidebar-button.secondary {
+    background-color: #2a2a2a;
+    color: #e0e0e0;
+}
+.sidebar-button.secondary:hover {
+    background-color: #383838;
+}
 
 /* -------------------- 聊天区域样式 -------------------- */
 .chat-area {
-    flex-grow: 1;
+    flex-grow: 1; /* 占据剩余所有宽度 */
     display: flex;
     flex-direction: column;
     position: relative;
-    padding: 20px; /* PC 默认 padding */
+    padding: 20px;
 }
-/* ... (消息和输入区域样式保持不变) ... */
-.chat-scroll-sentinel {
-    height: 60vh;
-    pointer-events: none;
+
+.chat-container {
+    flex-grow: 1; /* 占据 chat-area 剩余所有高度 */
+    overflow-y: auto;
+    padding-right: 10px; 
 }
-/* ... (其他样式保持不变) ... */
+
+/* 消息基础样式 (保持不变) */
+.message {
+    padding: 12px 18px; 
+    margin-bottom: 15px;
+    max-width: 80%;
+    border-radius: 20px; 
+    font-size: 0.95em;
+    line-height: 1.5;
+    word-wrap: break-word;
+    animation-duration: 0.5s; 
+    animation-fill-mode: forwards;
+    opacity: 0; 
+}
+/* ... (消息样式和动画保持不变) ... */
+@keyframes pulse {
+    0% { background-color: #202020; border-left-color: #00c7e250; } 
+    50% { background-color: #333333; border-left-color: #00c7e2; }
+    100% { background-color: #202020; border-left-color: #00c7e250; } 
+}
+.message.assistant.loading {
+    margin-right: auto;
+    background-color: #2a2a2a;
+    border-left: 3px solid #00c7e2;
+    color: #ccc;
+    font-style: italic;
+    animation-name: pulse;
+    animation-duration: 1.5s; 
+    animation-timing-function: ease-in-out;
+    animation-iteration-count: infinite;
+    width: auto;
+    opacity: 1;
+    padding: 12px 18px;
+    border-radius: 20px;
+}
+
+/* -------------------- 输入区域样式 -------------------- */
+.input-area {
+    display: flex;
+    padding-top: 20px;
+    border-top: 1px solid #222;
+    flex-shrink: 0; /* 阻止输入区域被压缩 */
+}
+/* ... (输入框和按钮样式保持不变) ... */
 
 
 /* -------------------- 响应式设计 (手机支持) -------------------- */
 @media (max-width: 768px) {
-    /* 修复点 1：手机 body 样式调整 */
+    /* 修复点 1：手机 body 样式调整 - 居中、高度和输入框可见性修复 */
     body {
+        /* 取消 PC 居中，让内容从顶部开始 */
+        justify-content: flex-start;
         align-items: flex-start;
-        height: 100vh; /* 确保使用全部视口高度 */
-        display: block; /* 取消 PC 端的 flex 居中 */
     }
     
     #main-view {
         width: 100%;
         height: 100vh; /* 确保主视图占据整个视口高度 */
-        flex-direction: column; 
+        flex-direction: column; /* 垂直堆叠 */
         max-width: 100%;
     }
 
-    /* 侧边栏：水平排列，收缩功能按钮 */
+    /* 侧边栏：水平排列，作为头部 */
     .sidebar {
         width: 100%;
         min-width: 100%;
-        padding: 15px;
+        padding: 10px 15px; /* 调整内边距 */
         border-right: none;
         border-bottom: 1px solid #222;
         flex-direction: row; 
         align-items: center;
         justify-content: flex-start; 
         gap: 10px;
+        flex-shrink: 0; /* 头部不能被压缩 */
     }
     
     .logo-text.mini {
@@ -83,11 +169,13 @@ body {
         margin-right: auto; 
     }
 
+    /* 隐藏 PC 上的新建对话和登出按钮 */
     .sidebar-button.mobile-hidden, 
     #logout-button {
         display: none !important; 
     }
     
+    /* 配置按钮在手机端始终显示 */
     #show-config-button {
         flex-shrink: 0; 
         padding: 8px 10px;
@@ -95,12 +183,17 @@ body {
         font-size: 0.9em;
     }
     
-    /* 修复点 1：聊天区域调整 */
+    /* 修复点 1：聊天区域调整 - 占据剩余空间 */
     .chat-area {
-        padding: 10px; /* 减少 padding */
-        flex: 1; /* 占据剩余所有垂直空间 */
+        padding: 10px;
+        flex: 1; /* 占据 sidebar 和 input-area 之间剩余的所有垂直空间 */
         overflow: hidden; 
         min-height: 0; /* 允许 flex item 缩小 */
+        height: 100%;
+    }
+    
+    .chat-container {
+        padding-right: 0;
     }
 
     .message {
@@ -110,5 +203,10 @@ body {
     .input-area {
         padding: 10px 0;
     }
-    /* ... (其他移动端样式保持不变) ... */
+    
+    /* 模态框修正 */
+    .admin-card, .login-card {
+        width: 95%;
+        margin: 20px;
+    }
 }
