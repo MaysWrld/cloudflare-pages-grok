@@ -31,16 +31,19 @@ export async function post(context) {
     try {
         const newConfig = await request.json();
         
-        // 校验：检查所有必需字段，包括 apiEndpoint
-        if (!newConfig.name || !newConfig.apiKey || !newConfig.model || !newConfig.systemInstruction || !newConfig.apiEndpoint) {
+        // 校验：检查所有必需字段，包括 temperature
+        if (!newConfig.name || !newConfig.apiKey || !newConfig.model || !newConfig.systemInstruction || !newConfig.apiEndpoint || newConfig.temperature === undefined || newConfig.temperature === null) {
              return new Response(JSON.stringify({ 
                 success: false, 
-                message: 'Missing required config fields (name, apiKey, model, systemInstruction, apiEndpoint).' 
+                message: 'Missing required config fields (name, apiKey, model, systemInstruction, apiEndpoint, temperature).' 
             }), { 
                 headers: { 'Content-Type': 'application/json' }, 
                 status: 400 
             });
         }
+
+        // 确保 temperature 是数字
+        newConfig.temperature = parseFloat(newConfig.temperature);
 
         await env.AI_CONFIG_KV.put(CONFIG_KEY, JSON.stringify(newConfig));
 
