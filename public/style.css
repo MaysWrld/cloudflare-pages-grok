@@ -19,14 +19,15 @@ body {
     background-color: #1a1a1a;
 }
 
+/* 修复点 1：确保桌面端侧边栏是垂直布局 */
 .sidebar {
     width: 250px;
-    min-width: 180px; /* 最小宽度，避免内容被挤压 */
+    min-width: 180px; 
     background-color: #191919;
     padding: 20px;
     border-right: 1px solid #222;
     display: flex;
-    flex-direction: column;
+    flex-direction: column; /* 确保是垂直排列 */
 }
 
 .logo-text {
@@ -83,10 +84,10 @@ body {
 
 /* 消息基础样式 */
 .message {
-    padding: 12px 18px; /* 增加 padding */
+    padding: 12px 18px; 
     margin-bottom: 15px;
     max-width: 80%;
-    border-radius: 20px; /* 变更：更圆润的形状 */
+    border-radius: 20px; 
     font-size: 0.95em;
     line-height: 1.5;
     word-wrap: break-word;
@@ -104,7 +105,7 @@ body {
     background-color: #007bff;
     color: white;
     margin-left: auto;
-    border-top-right-radius: 4px; /* 保留一个尖角，可选 */
+    border-top-right-radius: 4px;
 }
 
 /* AI 助手消息 (左侧) */
@@ -112,16 +113,14 @@ body {
     background-color: #2a2a2a;
     color: #e0e0e0;
     margin-right: auto;
-    border-top-left-radius: 4px; /* 保留一个尖角，可选 */
-    /* 默认宽度为 0，用于展开动画 */
+    border-top-left-radius: 4px; 
     width: 0;
-    padding: 12px 0; /* 隐藏内容 padding */
+    padding: 12px 0;
     overflow: hidden; 
 }
 
-/* 聊天列表底部的动态哨兵，确保有足够的空白 */
 .chat-scroll-sentinel {
-    height: 60vh; /* 设定一个动态高度，保证屏幕底部有大量空白 */
+    height: 60vh;
     pointer-events: none;
 }
 
@@ -265,7 +264,7 @@ body {
 .login-card {
     width: 350px;
     text-align: center;
-    position: relative; /* 使关闭按钮定位 */
+    position: relative; 
 }
 
 .admin-card {
@@ -294,30 +293,86 @@ body {
     color: #e0e0e0;
 }
 
-/* ... (输入组样式保持不变) ... */
+.input-group {
+    margin-bottom: 20px;
+}
 
+.input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #ccc;
+    font-weight: 700;
+}
+
+/* 修复点 2：确保登录框和配置框内的输入框独占一行 */
+.input-group input[type="text"],
+.input-group input[type="password"],
+.input-group input[type="url"],
+.input-group input[type="number"],
+.input-group textarea,
+#login-form input[type="text"],
+#login-form input[type="password"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #333;
+    border-radius: 6px;
+    background-color: #222;
+    color: #e0e0e0;
+    font-family: 'Roboto Mono', monospace;
+    box-sizing: border-box;
+    margin-bottom: 10px; /* 增加间距 */
+    display: block; /* 确保是块级元素 */
+}
+
+.input-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.input-group small {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.8em;
+    color: #999;
+}
+
+.submit-button {
+    width: 100%;
+    padding: 15px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    background-color: #00c7e2;
+    color: #121212;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+.submit-button:hover {
+    background-color: #00a0b8;
+}
 
 /* -------------------- 响应式设计 (手机支持) -------------------- */
 @media (max-width: 768px) {
     body {
-        /* 在移动端，让主体内容铺满整个屏幕 */
         align-items: flex-start;
     }
     
     #main-view {
         width: 100%;
         height: 100%;
-        flex-direction: column; /* 侧边栏和聊天区垂直堆叠 */
+        flex-direction: column; 
         max-width: 100%;
     }
 
+    /* 修复点 3：确保在移动端侧边栏的按钮横向排列，且侧边栏为行容器 */
     .sidebar {
         width: 100%;
         min-width: 100%;
         padding: 15px;
         border-right: none;
         border-bottom: 1px solid #222;
-        flex-direction: row; /* 按钮横向排列 */
+        flex-direction: row; 
         align-items: center;
         justify-content: space-between;
         gap: 10px;
@@ -328,29 +383,38 @@ body {
         font-size: 1.2em;
     }
 
-    /* 移动端隐藏登出按钮，仅保留在配置管理面板中 */
-    #logout-button {
-        display: none !important; 
-    }
-    
+    /* 在移动端，如果使用 display: flex 的 row 布局，需要确保按钮不会被挤压 */
     .sidebar-button {
+        flex-shrink: 0; /* 防止按钮缩小 */
         padding: 8px 10px;
         margin-bottom: 0;
         font-size: 0.9em;
     }
     
+    /* 移动端隐藏登出按钮，仅保留在配置管理面板中 */
+    /* 修复点 4：确保移动端登出按钮不显示，避免占用空间 */
+    #logout-button {
+        display: none !important; 
+    }
+    
     .chat-area {
         padding: 10px;
         flex: 1;
-        overflow: hidden; /* 防止聊天区域滚动条溢出 */
+        overflow: hidden; 
     }
 
     .message {
-        max-width: 95%; /* 移动端气泡更宽 */
+        max-width: 95%;
     }
     
     .input-area {
         padding: 10px 0;
+    }
+
+    /* 移动端覆盖登录表单输入框的 margin-bottom */
+    #login-form input[type="text"],
+    #login-form input[type="password"] {
+        margin-bottom: 10px;
     }
     
     #message-input {
