@@ -2,7 +2,7 @@
 
 const CONFIG_KEY = 'ASSISTANT_CONFIG';
 
-// GET: 获取配置
+// GET: 获取配置 (需要认证)
 export async function get(context) {
     const { env } = context;
     try {
@@ -25,17 +25,17 @@ export async function get(context) {
     }
 }
 
-// POST: 保存/更新配置
+// POST: 保存/更新配置 (需要认证)
 export async function post(context) {
     const { request, env } = context;
     try {
         const newConfig = await request.json();
         
-        // 简单的数据结构校验
-        if (!newConfig.name || !newConfig.apiKey || !newConfig.model || !newConfig.systemInstruction) {
+        // 校验：检查所有必需字段，包括 apiEndpoint
+        if (!newConfig.name || !newConfig.apiKey || !newConfig.model || !newConfig.systemInstruction || !newConfig.apiEndpoint) {
              return new Response(JSON.stringify({ 
                 success: false, 
-                message: 'Missing required config fields.' 
+                message: 'Missing required config fields (name, apiKey, model, systemInstruction, apiEndpoint).' 
             }), { 
                 headers: { 'Content-Type': 'application/json' }, 
                 status: 400 
