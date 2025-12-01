@@ -74,11 +74,11 @@ function appendMessage(message) {
     // *** 修复点 3：用户消息发送后，确保用户消息置顶到视口最上方 ***
     if (message.role === 'user') {
         requestAnimationFrame(() => {
-            // 使用 scrollIntoView 配合 block: 'start' 确保元素在顶部
+            // 使用 scrollIntoView({ block: 'start' }) 将用户消息置于视口顶部
             messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     } else if (message.role === 'assistant' || message.role === 'loading') {
-        // AI 消息和加载消息只需要确保当前消息可见，不需要强制置顶
+        // AI 消息和加载消息只需要确保当前消息可见
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
 
@@ -207,12 +207,10 @@ async function sendMessage() {
             body: JSON.stringify({ messages: conversationHistory }) 
         });
 
-        // 检查是否有 Basic Auth 提示（尽管这主要是后端配置问题，前端仍应处理）
+        // 检查是否有 Basic Auth 提示
         if (response.status === 401 && !basicAuthHeader) {
-            // 如果后端对聊天 API 也进行了保护且用户未登录，则显示登录提示
             toggleLoadingState(false);
-            appendMessage({ role: 'error', content: '您未登录管理员账户，无法发送消息，请先登录。' });
-            // 不自动弹出登录框，等待用户点击配置按钮
+            appendMessage({ role: 'error', content: '聊天 API 未授权。请联系管理员或检查配置。' });
             conversationHistory.pop();
             return;
         }
@@ -270,7 +268,6 @@ closeConfigButton.addEventListener('click', () => {
  */
 async function fetchConfig(updateLogoOnly = false) {
     if (!basicAuthHeader) {
-        // 如果未登录，只更新 Logo 也不进行任何网络请求
         return; 
     }
     
