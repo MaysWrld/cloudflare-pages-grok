@@ -1,4 +1,4 @@
-// public/script.js (最终优化版)
+// public/script.js (最终修复版本)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -21,6 +21,11 @@ const closeConfigButton = document.getElementById('close-config-button');
 const assistantLogo = document.getElementById('assistant-logo'); 
 const loginView = document.getElementById('login-view'); 
 const closeLoginButton = document.getElementById('close-login-button');
+
+// 侧边栏伸缩元素
+const sidebar = document.querySelector('.sidebar');
+const toggleSidebarButton = document.getElementById('toggle-sidebar');
+
 
 // 用于显示 AI 正在思考的加载消息的 DOM 元素
 let loadingMessageEl = null; 
@@ -67,18 +72,16 @@ function appendMessage(message) {
         messageEl.innerHTML = `<p>${message.content.replace(/\n/g, '<br>')}</p>`; 
     }
     
-    // 始终在哨兵之前添加消息
     const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
     chatContainer.insertBefore(messageEl, sentinel);
     
     // 滚动逻辑：仅在用户发送消息时强制置顶
     if (message.role === 'user') {
         requestAnimationFrame(() => {
-            // 将用户消息置于视口顶部
             messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
     } 
-    // AI 消息和加载消息，只需要确保其在视口内即可（等待 sendMessage 结束后再统一置顶）
+    // AI 消息和加载消息，只需要确保其在视口内即可
     else if (message.role === 'assistant' || message.role === 'loading') {
         messageEl.scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
@@ -91,14 +94,12 @@ function toggleLoadingState(isLoading) {
     messageInput.disabled = isLoading;
     sendButton.disabled = isLoading;
     
-    // 清除上一次的倒计时
     if (countdownInterval) {
         clearInterval(countdownInterval);
         countdownInterval = null;
     }
 
     if (isLoading) {
-        // 实现 30 秒倒计时
         let count = 30;
         
         loadingMessageEl = document.createElement('div');
@@ -116,7 +117,6 @@ function toggleLoadingState(isLoading) {
         const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
         chatContainer.insertBefore(loadingMessageEl, sentinel);
         
-        // 立即运行一次并设置间隔
         updateCountdown();
         countdownInterval = setInterval(updateCountdown, 1000);
 
@@ -132,7 +132,25 @@ function toggleLoadingState(isLoading) {
     }
 }
 
-// --- 页面初始化和 UI 切换 (保持不变) ---
+// --- 伸缩侧边栏逻辑 ---
+function toggleSidebar() {
+    // 仅在移动设备上执行伸缩
+    if (window.innerWidth <= 768) {
+        sidebar.classList.toggle('open');
+        if (sidebar.classList.contains('open')) {
+            toggleSidebarButton.textContent = '✕'; 
+            // 阻止主页面滚动
+            document.body.style.overflow = 'hidden'; 
+        } else {
+            toggleSidebarButton.textContent = '☰';
+            // 恢复主页面滚动
+            document.body.style.overflow = ''; 
+        }
+    }
+}
+
+
+// --- 页面初始化和 UI 切换 ---
 
 function toggleAdminButtons(isAdmin) {
     logoutButton.style.display = isAdmin ? 'block' : 'none'; 
@@ -152,12 +170,15 @@ function initPage() {
         toggleAdminButtons(false);
     }
     
+    // 仅在已登录时尝试获取配置
     if (basicAuthHeader) {
         fetchConfig(true); 
     }
 }
 
-// --- 事件监听器 (保持不变) ---
+// --- 事件监听器 ---
+
+// 核心发送消息功能
 sendButton.addEventListener('click', sendMessage);
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -165,9 +186,21 @@ messageInput.addEventListener('keypress', (e) => {
         sendMessage();
     }
 });
+
+toggleSidebarButton.addEventListener('click', toggleSidebar);
+
+// 点击侧边栏内的任意按钮后自动关闭侧边栏（增强移动端体验）
+sidebar.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768 && e.target.classList.contains('sidebar-button')) {
+        setTimeout(toggleSidebar, 300); 
+    }
+});
+
+
 closeLoginButton.addEventListener('click', () => {
     loginView.style.display = 'none';
 });
+
 showConfigButton.addEventListener('click', () => {
     if (basicAuthHeader) {
         adminPanel.style.display = 'flex';
@@ -175,15 +208,17 @@ showConfigButton.addEventListener('click', () => {
     } else {
         loginView.style.display = 'flex';
     }
+    // 如果是手机端，点击配置后自动关闭侧边栏
+    if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+        setTimeout(toggleSidebar, 100); 
+    }
 });
-
 
 // --- 核心聊天逻辑 ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
 
-    // 1. 添加用户消息并触发置顶滚动 (已在 appendMessage 中处理)
     const userMessageEl = appendMessage({ role: 'user', content: userMessage }); 
     conversationHistory.push({ role: 'user', content: userMessage });
     messageInput.value = '';
@@ -232,7 +267,7 @@ async function sendMessage() {
         
         conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
         
-        // *** 修复点 2：AI 回复完成后，将 AI 消息置顶 ***
+        // AI 回复完成后，将 AI 消息置顶
         requestAnimationFrame(() => {
              assistantMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
         });
@@ -246,7 +281,7 @@ async function sendMessage() {
     }
 }
 
-// --- 其他功能 (保持不变) ---
+// --- 新建对话功能 ---
 newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
@@ -255,11 +290,15 @@ newChatButton.addEventListener('click', () => {
     sentinel.classList.add('chat-scroll-sentinel');
     chatContainer.appendChild(sentinel);
 });
+
+
 closeConfigButton.addEventListener('click', () => {
     adminPanel.style.display = 'none';
 });
-// ... (fetchConfig, loginForm, logoutButton, configForm 保持不变) ...
 
+/**
+ * 获取配置并填充表单，或仅更新前端 Logo。
+ */
 async function fetchConfig(updateLogoOnly = false) {
     if (!basicAuthHeader) {
         return; 
