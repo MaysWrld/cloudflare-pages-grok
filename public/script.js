@@ -1,4 +1,4 @@
-// public/script.js (最终版本，移除欢迎语和初始消息)
+// public/script.js (功能无变动，确保发送和滚动逻辑正确)
 
 // 存储对话历史，用于关联上下文
 let conversationHistory = []; 
@@ -19,13 +19,13 @@ const configForm = document.getElementById('config-form');
 const adminPanel = document.getElementById('admin-panel');
 const closeConfigButton = document.getElementById('close-config-button');
 const assistantLogo = document.getElementById('assistant-logo'); 
-const loginView = document.getElementById('login-view'); // 获取整个登录视图
-const closeLoginButton = document.getElementById('close-login-button'); // 新增：获取登录关闭按钮
+const loginView = document.getElementById('login-view'); 
+const closeLoginButton = document.getElementById('close-login-button');
 
 // 用于显示 AI 正在思考的加载消息的 DOM 元素
 let loadingMessageEl = null; 
 
-// --- 动画和效果函数 (typeWriterEffect, appendMessage) ---
+// --- 动画和效果函数 ---
 
 /**
  * 实现打字机效果
@@ -71,7 +71,6 @@ function appendMessage(message) {
     const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
     chatContainer.insertBefore(messageEl, sentinel);
     
-    // *** 变更：用户消息滚动逻辑 ***
     if (message.role === 'user') {
         // 将用户消息滚动到屏幕顶部 (滚动到该元素的位置，减去一个顶部边距)
         chatContainer.scrollTo({ top: messageEl.offsetTop - 20, behavior: 'smooth' });
@@ -114,9 +113,7 @@ function toggleAdminButtons(isAdmin) {
 }
 
 function initPage() {
-    // *** 变更：主视图始终显示 ***
     document.getElementById('main-view').style.display = 'flex';
-    // *** 变更：登录视图默认隐藏 ***
     loginView.style.display = 'none';
 
     const authData = localStorage.getItem('basicAuth');
@@ -133,25 +130,30 @@ function initPage() {
 
 // --- 事件监听器 ---
 
-// 登录关闭按钮
+// 核心发送消息功能
+sendButton.addEventListener('click', sendMessage);
+messageInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+
 closeLoginButton.addEventListener('click', () => {
     loginView.style.display = 'none';
 });
 
 showConfigButton.addEventListener('click', () => {
-    // *** 变更：根据是否已登录决定显示配置面板还是登录框 ***
     if (basicAuthHeader) {
         adminPanel.style.display = 'flex';
         fetchConfig(); 
     } else {
-        // 未登录时，显示登录对话框
         loginView.style.display = 'flex';
     }
 });
 
-// ... (其他事件监听器和登录/配置逻辑保持不变)
-
-// --- 核心聊天逻辑 (保持不变) ---
+// --- 核心聊天逻辑 ---
 async function sendMessage() {
     const userMessage = messageInput.value.trim();
     if (!userMessage) return;
@@ -205,8 +207,7 @@ async function sendMessage() {
     }
 }
 
-// ... (以下代码与上一版本相同，确保完整性) ...
-
+// --- 新建对话功能 ---
 newChatButton.addEventListener('click', () => {
     toggleLoadingState(false); 
     conversationHistory = []; 
@@ -296,7 +297,6 @@ loginForm.addEventListener('submit', async (e) => {
             basicAuthHeader = authHeader;
             toggleAdminButtons(true);
             
-            // 登录成功后，关闭登录视图，打开配置面板
             loginView.style.display = 'none';
             adminPanel.style.display = 'flex';
             fetchConfig();
