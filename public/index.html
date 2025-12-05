@@ -21,60 +21,84 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            overflow: hidden; /* 默认隐藏滚动条，由 chat-container 控制 */
+            overflow: hidden; 
+            position: relative; /* 确保 body 可以包含绝对定位的 canvas */
+        }
+
+        /* -------------------- CANVAS 数字背景 -------------------- */
+        #matrix-canvas {
+            position: fixed; /* 固定在视口，确保背景铺满 */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1; /* 置于所有内容之下 */
+            opacity: 0.8; /* 略微降低透明度，不影响前景文字 */
         }
 
         /* -------------------- 主应用容器 (#main-app) -------------------- */
         #main-app {
             display: flex;
+            flex-direction: column; 
             width: 100%;
-            max-width: 1400px;
-            height: 100%;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
-            background-color: #1a1a1a;
+            max-width: 1000px; 
+            height: 100vh; 
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.9); /* 增强阴影，突出前景 */
+            background-color: rgba(26, 26, 26, 0.95); /* 半透明背景，让数字雨透过来 */
             position: relative;
-            overflow: hidden; /* 阻止内容溢出 */
+            overflow: hidden; 
+            padding: 0; 
+            border: 1px solid rgba(0, 199, 226, 0.3); /* 添加霓虹边框效果 */
+            z-index: 100; /* 确保在 canvas 之上 */
+        }
+        
+        /* -------------------- 头部导航/控制区 -------------------- */
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-bottom: 1px solid #222;
+            flex-shrink: 0;
+            background-color: rgba(26, 26, 26, 0.95); /* 确保头部清晰 */
+            z-index: 10;
         }
 
-        /* Logo 和标题 */
         .logo-text {
             color: #00c7e2;
-            font-size: 1.8em;
-            font-weight: 700;
-        }
-        .logo-text.mini {
             font-size: 1.4em;
-            margin-bottom: 30px;
+            font-weight: 700;
+            text-shadow: 0 0 5px #00c7e280; /* 霓虹效果 */
         }
 
-        /* -------------------- 侧边栏 (#sidebar) -------------------- */
-        #sidebar {
-            width: 250px;
-            min-width: 180px; 
-            background-color: #191919;
-            padding: 20px;
-            border-right: 1px solid #222;
+        .control-buttons {
             display: flex;
-            flex-direction: column; 
-            flex-shrink: 0; 
+            gap: 10px;
         }
 
-        /* 侧边栏按钮 */
-        .sidebar-button {
-            padding: 12px;
-            margin-bottom: 10px;
+        /* 控制按钮 */
+        .control-button {
+            width: 40px; 
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0; 
+            
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-family: 'Roboto Mono', monospace;
-            transition: background-color 0.3s, opacity 0.3s;
-            text-align: left;
+            transition: background-color 0.3s;
+            font-size: 1.2em; 
+            line-height: 1; 
         }
-        .sidebar-button.primary {
+        .control-button.primary {
             background-color: #00c7e2;
             color: #121212;
+            font-weight: 700;
         }
-        .sidebar-button.secondary {
+        .control-button.secondary {
             background-color: #2a2a2a;
             color: #e0e0e0;
         }
@@ -82,32 +106,57 @@
         /* -------------------- 聊天区域 (#chat-area) -------------------- */
         .chat-area {
             flex-grow: 1; 
+            position: relative;
             display: flex;
             flex-direction: column;
-            padding: 20px;
-            position: relative;
+            overflow: hidden;
         }
 
         /* 聊天容器 (可滚动部分) */
         .chat-container {
             flex-grow: 1;
             overflow-y: auto;
-            padding-right: 10px;
+            padding: 20px;
+            padding-bottom: 100px; 
             min-height: 0; 
-            /* 添加 padding-bottom 确保最后一条消息下方有空间 */
-            padding-bottom: 20px; 
         }
 
+        /* 初始内容居中显示 (当没有消息时) */
+        .initial-message-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none; 
+            transition: opacity 0.3s;
+            text-align: center;
+            padding: 20px;
+        }
+        .initial-message-container h1 {
+            color: #00c7e2;
+            margin-bottom: 15px;
+            text-shadow: 0 0 8px #00c7e250;
+        }
+        .initial-message-container p {
+            color: #999;
+        }
+        
         /* 消息样式 */
         .message {
             padding: 12px 18px; 
             margin-bottom: 15px;
-            max-width: 80%;
+            max-width: 90%;
             border-radius: 20px; 
             word-wrap: break-word;
             animation-duration: 0.5s; 
             animation-fill-mode: forwards;
             opacity: 0; 
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); /* 增加消息块的清晰度 */
         }
         .message p { margin: 0; }
         .message.user {
@@ -145,12 +194,19 @@
             padding: 12px 18px;
             border-radius: 20px;
         }
-        /* -------------------- 输入区域样式 -------------------- */
+
+        /* -------------------- 浮动输入区域样式 -------------------- */
         .input-area {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
             display: flex;
-            padding-top: 20px;
+            padding: 15px 20px;
+            background-color: rgba(26, 26, 26, 0.95); 
             border-top: 1px solid #222;
             flex-shrink: 0;
+            z-index: 5;
         }
         #message-input {
             flex-grow: 1;
@@ -180,7 +236,7 @@
             color: #666;
         }
 
-        /* -------------------- 模态框样式 (Login/Admin) -------------------- */
+        /* -------------------- 模态框样式 -------------------- */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -224,7 +280,7 @@
             color: #888;
             cursor: pointer;
         }
-        /* 输入组样式统一，解决乱码问题 */
+        /* 输入组样式 */
         .input-group label {
             display: block;
             margin-bottom: 8px;
@@ -267,96 +323,29 @@
             font-weight: 700;
             cursor: pointer;
         }
-
-
-        /* -------------------- 响应式设计 -------------------- */
-
-        /* 移动端头部 (默认隐藏) */
-        .mobile-header {
-            display: none;
-            align-items: center;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #222;
-            margin-bottom: 10px;
-        }
-        .mobile-only { display: none; }
-        .desktop-only { display: block; }
-
+        
+        /* -------------------- 手机端适配 (宽度小于 768px) -------------------- */
         @media (max-width: 768px) {
-            /* 桌面端按钮隐藏，移动端按钮显示 */
-            .desktop-only { display: none !important; }
-            .mobile-only { display: block !important; }
-            
-            /* 修复 body 居中问题 */
-            body {
-                justify-content: flex-start;
-                align-items: flex-start;
-            }
-
             #main-app {
-                height: 100vh; 
-                flex-direction: column; 
+                max-width: 100%; 
             }
-            
-            /* 移动端头部显示 */
-            .mobile-header {
-                display: flex;
+            .header-controls {
+                padding: 10px 15px;
             }
-            .mobile-header #toggle-sidebar {
-                padding: 8px 12px;
-                font-size: 1.5em;
-                margin-right: 15px;
-                background-color: #2a2a2a;
-                color: #e0e0e0;
-                border: none;
-            }
-            .mobile-header .logo-text.mini {
-                margin-bottom: 0;
-            }
-            
-            /* 侧边栏伸缩逻辑 */
-            #sidebar {
-                position: fixed;
-                top: 0;
-                left: 0;
-                height: 100vh;
-                width: 0; 
-                min-width: 0;
-                overflow: hidden; 
-                padding: 0; 
-                border-right: none;
-                transition: width 0.3s ease, padding 0.3s ease;
-                background-color: #191919;
-                z-index: 500; 
-            }
-
-            #sidebar.open {
-                width: 250px; 
-                padding: 20px;
-                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5);
-            }
-            
-            .chat-area {
-                padding: 10px;
-                flex: 1; 
-                min-height: 0; 
-            }
-            
-            .chat-container {
-                padding-right: 0;
-            }
-            
-            .message {
-                max-width: 95%;
-            }
-            
             .input-area {
-                padding: 10px 0;
+                padding: 10px 15px;
             }
-
-            .admin-card {
-                width: 95%;
-                margin: 20px;
+            .chat-container {
+                padding: 15px 15px;
+                padding-bottom: 100px; 
+            }
+            .send-button {
+                padding: 10px 18px;
+            }
+            .control-button {
+                 width: 36px;
+                 height: 36px;
+                 font-size: 1.1em;
             }
         }
         /* ========================================================== */
@@ -365,28 +354,32 @@
     </style>
 </head>
 <body>
+    
+    <canvas id="matrix-canvas"></canvas>
 
     <div id="main-app">
         
-        <div id="sidebar" class="sidebar">
-            <div id="assistant-logo" class="logo-text mini">AI Assistant</div>
+        <div class="header-controls">
+            <span id="assistant-logo" class="logo-text">AI Assistant</span>
             
-            <button id="new-chat-button" class="sidebar-button primary desktop-only">
-                + 新建对话 (Reset Context)
-            </button>
-            <button id="show-config-button" class="sidebar-button secondary">
-                ⚙️ 配置管理
-            </button>
-            <button id="logout-button" class="sidebar-button secondary desktop-only" style="display: none;">
-                🚪 登出
-            </button>
+            <div class="control-buttons">
+                <button id="new-chat-button" class="control-button primary" title="新建对话 (Reset Context)">
+                    +
+                </button>
+                <button id="show-config-button" class="control-button secondary" title="配置管理">
+                    ⚙️
+                </button>
+                <button id="logout-button" class="control-button secondary" style="display: none;" title="登出">
+                    🚪
+                </button>
+            </div>
         </div>
 
         <div id="chat-area" class="chat-area">
             
-            <div class="mobile-header">
-                <button id="toggle-sidebar" class="sidebar-button secondary mobile-only">☰</button>
-                <span id="mobile-logo" class="logo-text mini mobile-only">AI Assistant</span>
+            <div id="initial-message-container" class="initial-message-container">
+                <h1>AI Assistant Ready.</h1>
+                <p>请在下方输入框开始对话。您的内容将显示在这里。</p>
             </div>
 
             <div id="chat-container" class="chat-container">
@@ -452,7 +445,7 @@
         /* ========================================================== */
         /* === JavaScript (JS) 开始 === */
         /* ========================================================== */
-
+        
         // --- 全局状态 ---
         let conversationHistory = []; 
         let basicAuthHeader = null; 
@@ -462,9 +455,9 @@
         const chatContainer = document.getElementById('chat-container');
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
-        const sidebar = document.getElementById('sidebar');
         const assistantLogo = document.getElementById('assistant-logo');
-        const mobileLogo = document.getElementById('mobile-logo');
+        const initialMessageContainer = document.getElementById('initial-message-container');
+        const chatArea = document.getElementById('chat-area');
 
         // 模态框相关
         const modalOverlay = document.getElementById('modal-overlay');
@@ -477,18 +470,86 @@
         const newChatButton = document.getElementById('new-chat-button');
         const showConfigButton = document.getElementById('show-config-button');
         const logoutButton = document.getElementById('logout-button');
-        const toggleSidebarButton = document.getElementById('toggle-sidebar');
-
 
         let loadingMessageEl = null; 
         let countdownInterval = null; 
+
+        // -------------------------------------------------------------
+        // === Matrix 数字雨效果代码 ===
+        // -------------------------------------------------------------
+        const canvas = document.getElementById('matrix-canvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+        let columns = Math.floor(width / 20); // 每列20px宽度
+        let drops = []; // 存储每列数字的y坐标
+
+        // 初始化 drops 数组
+        for(let i = 0; i < columns; i++) {
+            drops[i] = 1; // 从第一行开始
+        }
+
+        const characters = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()';
+
+        function drawMatrix() {
+            // 半透明的黑色矩形覆盖整个画布，形成拖尾效果
+            ctx.fillStyle = 'rgba(26, 26, 26, 0.05)';
+            ctx.fillRect(0, 0, width, height);
+            
+            ctx.font = '20px Roboto Mono'; // 字体大小
+
+            for(let i = 0; i < drops.length; i++) {
+                const text = characters[Math.floor(Math.random() * characters.length)];
+                const x = i * 20; // x坐标
+                const y = drops[i] * 20; // y坐标
+
+                // 设置颜色：接近顶部是亮白色，其余是绿色
+                if (drops[i] * 20 < height * 0.1) {
+                    ctx.fillStyle = '#C0FFEE'; // 亮色
+                } else {
+                    ctx.fillStyle = '#00CC33'; // 绿色
+                }
+
+                ctx.fillText(text, x, y);
+
+                // 如果数字落到底部，或者随机地 (模拟不均匀下降)
+                if(y > height && Math.random() > 0.975) {
+                    drops[i] = 0; // 重置到顶部
+                }
+                
+                // 下降速度
+                drops[i]++;
+            }
+        }
+
+        // 适应窗口大小变化
+        function resizeCanvas() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            columns = Math.floor(width / 20);
+            drops.length = columns; // 调整 drops 数组大小
+            for(let i = 0; i < columns; i++) {
+                if (drops[i] === undefined || drops[i] > height/20) {
+                     drops[i] = Math.floor(Math.random() * height/20); // 随机初始化y坐标
+                }
+            }
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas(); // 初始设置一次大小
+
+        // 动画循环
+        let matrixInterval = setInterval(drawMatrix, 40); // 40ms 约 25FPS
+        
+        // -------------------------------------------------------------
+        // === 聊天应用功能代码 ===
+        // -------------------------------------------------------------
 
         // --- 工具函数 ---
 
         /**
          * 统一滚动聊天容器到底部
-         * 总是使用 requestAnimationFrame 确保在下次重绘前执行，获取准确的 scrollHeight
-         * @param {boolean} smooth - 是否平滑滚动 (默认 true)
          */
         function scrollChatToBottom(smooth = true) {
             requestAnimationFrame(() => {
@@ -499,10 +560,26 @@
             });
         }
 
+        /**
+         * 切换初始居中消息和滚动容器的显示状态
+         */
+        function updateChatDisplay() {
+            const hasMessages = conversationHistory.length > 0 || chatContainer.children.length > 0;
+            
+            if (hasMessages) {
+                initialMessageContainer.style.opacity = '0';
+                initialMessageContainer.style.pointerEvents = 'none';
+                chatArea.style.justifyContent = 'flex-start';
+            } else {
+                initialMessageContainer.style.opacity = '1';
+                initialMessageContainer.style.pointerEvents = 'auto'; 
+                chatArea.style.justifyContent = 'center';
+            }
+        }
+
 
         /**
          * 切换模态框显示状态
-         * @param {string} cardId - 要显示的卡片ID ('login-card' 或 'admin-panel')
          */
         function showModal(cardId) {
             modalOverlay.style.display = 'flex';
@@ -517,29 +594,14 @@
         }
 
         /**
-         * 切换侧边栏状态（仅限移动端）
-         */
-        function toggleSidebar() {
-            if (window.innerWidth <= 768) {
-                sidebar.classList.toggle('open');
-                const isOpen = sidebar.classList.contains('open');
-                toggleSidebarButton.textContent = isOpen ? '✕' : '☰';
-                document.body.style.overflow = isOpen ? 'hidden' : '';
-            }
-        }
-
-        /**
          * 实现打字机效果
          */
         function typeWriterEffect(targetElement, text) {
-            // 确保内容显示前清空
             targetElement.innerHTML = ''; 
             return new Promise(resolve => {
                 let i = 0;
-                
                 function type() {
                     if (i < text.length) {
-                        // 处理 <br> 标签
                         if (text.substring(i, i + 4) === '<br>') {
                             targetElement.innerHTML += '<br>';
                             i += 4;
@@ -547,8 +609,7 @@
                             targetElement.innerHTML += text.charAt(i);
                             i++;
                         }
-                        // ❗ 重点修改：移除打字机过程中的实时滚动
-                        
+                        // 打字机过程中不滚动
                         setTimeout(type, TYPING_SPEED_MS); 
                     } else {
                         resolve();
@@ -560,7 +621,6 @@
 
         /**
          * 将消息添加到聊天容器
-         * @param {object} message - { role: 'user'/'assistant'/'error'/'loading', content: string }
          */
         function appendMessage(message) {
             const messageEl = document.createElement('div');
@@ -575,8 +635,8 @@
                 }
             }
             
-            // 消息追加到 chatContainer 的末尾
             chatContainer.appendChild(messageEl);
+            updateChatDisplay(); 
             
             return messageEl;
         }
@@ -597,7 +657,7 @@
                 let count = 30;
                 
                 loadingMessageEl = appendMessage({ role: 'loading', content: `深度思考中，预计 ${count} 秒...` });
-                scrollChatToBottom(); // 显示加载状态时滚动到底部
+                scrollChatToBottom(); 
                 
                 const updateCountdown = () => {
                     count--;
@@ -633,7 +693,6 @@
 
         function updateLogoName(name) {
             if (assistantLogo) assistantLogo.textContent = name;
-            if (mobileLogo) mobileLogo.textContent = name;
         }
 
         function initPage() {
@@ -641,12 +700,12 @@
             if (authData) {
                 basicAuthHeader = authData;
                 updateAdminUI(true);
-                // 尝试获取配置以更新 Logo
                 fetchConfig(true); 
             } else {
                 basicAuthHeader = null;
                 updateAdminUI(false);
             }
+            updateChatDisplay(); 
         }
 
         /**
@@ -661,8 +720,7 @@
             conversationHistory.push({ role: 'user', content: userMessage });
             messageInput.value = '';
 
-            // 💥 滚动策略 1: 用户消息发送后，立即滚动到底部
-            scrollChatToBottom(); 
+            // 移除用户消息发送后的滚动
 
             toggleLoadingState(true);
 
@@ -682,19 +740,16 @@
                 if (data.success) {
                     const assistantReply = data.reply;
                     
-                    // 1. 移除加载状态
                     toggleLoadingState(false);
 
-                    // 2. 添加 AI 消息，并开始打字机效果
-                    const assistantMessageEl = appendMessage({ role: 'assistant', content: '' }); // 空内容，等待打字机填充
+                    const assistantMessageEl = appendMessage({ role: 'assistant', content: '' });
                     const textTarget = assistantMessageEl.querySelector('p');
 
                     await typeWriterEffect(textTarget, assistantReply);
                     
-                    // 3. 更新历史记录
                     conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
                     
-                    // 💥 滚动策略 2: AI 消息打字结束后，滚动到底部，确保全文可见
+                    // 💥 滚动策略：AI 消息打字结束后，滚动到底部
                     scrollChatToBottom();
 
                 } else {
@@ -706,7 +761,7 @@
                 console.error('Chat error:', error);
                 toggleLoadingState(false);
                 appendMessage({ role: 'error', content: `[Error] ${error.message}` });
-                // 💥 滚动策略 3: 错误消息出现后，滚动到底部
+                // 💥 滚动策略：错误消息出现后，滚动到底部
                 scrollChatToBottom();
                 
                 // 失败时移除最后一条用户消息
@@ -786,18 +841,13 @@
         newChatButton.addEventListener('click', () => {
             toggleLoadingState(false); 
             conversationHistory = []; 
-            // 清空聊天容器内容，并滚动到顶部（新对话）
             chatContainer.innerHTML = ''; 
-            scrollChatToBottom(false); // 立即滚动到底部
+            scrollChatToBottom(false); // 立即滚动到顶部
+            updateChatDisplay(); // 显示居中提示
         });
 
         // 显示配置/登录
         showConfigButton.addEventListener('click', () => {
-            // 手机端点击后关闭侧边栏
-            if (sidebar.classList.contains('open')) {
-                toggleSidebar();
-            }
-            
             if (basicAuthHeader) {
                 showModal('admin-panel');
                 fetchConfig(); 
@@ -805,17 +855,6 @@
                 showModal('login-card');
             }
         });
-
-        // 侧边栏伸缩
-        toggleSidebarButton.addEventListener('click', toggleSidebar);
-
-        // 侧边栏按钮点击后关闭侧边栏
-        sidebar.addEventListener('click', (e) => {
-            if (window.innerWidth <= 768 && e.target.classList.contains('sidebar-button')) {
-                setTimeout(toggleSidebar, 300); 
-            }
-        });
-
 
         // 登录
         loginForm.addEventListener('submit', async (e) => {
