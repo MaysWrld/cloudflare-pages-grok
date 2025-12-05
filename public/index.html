@@ -565,6 +565,7 @@
             chatContainer.insertBefore(messageEl, sentinel);
             
             // 滚动逻辑：用户消息置顶，加载消息置底确保可见
+            // ❗ 注意：当 role 为 'assistant' 时，这里不会触发滚动，滚动逻辑已从 sendMessage 中移除
             if (message.role === 'user' || message.role === 'error' || message.role === 'loading') {
                 requestAnimationFrame(() => {
                     // 用户消息和加载消息置顶或置底
@@ -649,6 +650,7 @@
             const userMessage = messageInput.value.trim();
             if (!userMessage) return;
 
+            // 1. 发送用户消息并更新历史记录 (appendMessage 会触发滚动到用户消息)
             appendMessage({ role: 'user', content: userMessage }); 
             conversationHistory.push({ role: 'user', content: userMessage });
             messageInput.value = '';
@@ -683,10 +685,7 @@
                     // 3. 更新历史记录
                     conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
                     
-                    // 4. AI 消息置顶
-                    requestAnimationFrame(() => {
-                         assistantMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    });
+                    // 4. 【已移除】AI 消息不再强制滚动到顶部 (符合用户要求)
 
                 } else {
                     throw new Error(data.message.includes('not configured') 
