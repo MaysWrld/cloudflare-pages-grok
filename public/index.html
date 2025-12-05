@@ -96,6 +96,7 @@
             min-height: 0; 
         }
 
+        /* 哨兵元素：用于保证聊天容器底部有一定的空间，但此处已改为用滚动到底部的方式 */
         .chat-scroll-sentinel {
             height: 60vh;
             pointer-events: none;
@@ -192,7 +193,7 @@
             height: 100%;
             background: rgba(0, 0, 0, 0.8);
             display: flex;
-            justify-content: center; /* 修复：确保卡片居中 */
+            justify-content: center; 
             align-items: center;
             z-index: 2000;
         }
@@ -244,7 +245,7 @@
             border: 1px solid #333;
             border-radius: 6px;
             background-color: #222;
-            color: #e0e0e0; /* 修复：确保输入框文字颜色正确 */
+            color: #e0e0e0; 
             font-family: 'Roboto Mono', monospace;
             box-sizing: border-box;
             margin-bottom: 5px; 
@@ -393,7 +394,7 @@
             </div>
 
             <div id="chat-container" class="chat-container">
-                <div class="chat-scroll-sentinel"></div>
+                <div class="chat-scroll-sentinel"></div> 
             </div>
 
             <div class="input-area">
@@ -490,6 +491,21 @@
         // --- 工具函数 ---
 
         /**
+         * 统一滚动聊天容器到底部
+         * 总是使用 requestAnimationFrame 确保在下次重绘前执行，获取准确的 scrollHeight
+         * @param {boolean} smooth - 是否平滑滚动 (默认 true)
+         */
+        function scrollChatToBottom(smooth = true) {
+            requestAnimationFrame(() => {
+                chatContainer.scrollTo({
+                    top: chatContainer.scrollHeight,
+                    behavior: smooth ? 'smooth' : 'auto'
+                });
+            });
+        }
+
+
+        /**
          * 切换模态框显示状态
          * @param {string} cardId - 要显示的卡片ID ('login-card' 或 'admin-panel')
          */
@@ -536,6 +552,9 @@
                             targetElement.innerHTML += text.charAt(i);
                             i++;
                         }
+                        // 确保在打字过程中，如果用户在底部附近，内容会随之滚动
+                        scrollChatToBottom(false); // 使用非平滑滚动以避免抖动
+                        
                         setTimeout(type, TYPING_SPEED_MS); 
                     } else {
                         resolve();
@@ -553,25 +572,20 @@
             const messageEl = document.createElement('div');
             messageEl.classList.add('message', message.role);
 
-            if (message.role === 'assistant' || message.role === 'error' || message.role === 'user') {
-                // 修复：消息内容只在非加载状态时写入 p 标签
+            if (message.role === 'assistant' || message.role === 'error' || message.role === 'user' || message.role === 'loading') {
                 const content = message.content.replace(/\n/g, '<br>');
                 messageEl.innerHTML = `<p>${content}</p>`;
-                messageEl.classList.add('animate-in');
+                
+                if (message.role === 'user' || message.role === 'error') {
+                    messageEl.classList.add('animate-in');
+                }
             }
             
             // 始终在哨兵之前添加消息
             const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
             chatContainer.insertBefore(messageEl, sentinel);
             
-            // 滚动逻辑：用户消息置顶，加载消息置底确保可见
-            // ❗ 注意：当 role 为 'assistant' 时，这里不会触发滚动，滚动逻辑已从 sendMessage 中移除
-            if (message.role === 'user' || message.role === 'error' || message.role === 'loading') {
-                requestAnimationFrame(() => {
-                    // 用户消息和加载消息置顶或置底
-                    messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                });
-            }
+            // 移除消息级别的 scrollIntoView，统一由 scrollChatToBottom 处理
 
             return messageEl;
         }
@@ -592,6 +606,7 @@
                 let count = 30;
                 
                 loadingMessageEl = appendMessage({ role: 'loading', content: `深度思考中，预计 ${count} 秒...` });
+                scrollChatToBottom(); // 显示加载状态时滚动到底部
                 
                 const updateCountdown = () => {
                     count--;
@@ -650,10 +665,13 @@
             const userMessage = messageInput.value.trim();
             if (!userMessage) return;
 
-            // 1. 发送用户消息并更新历史记录 (appendMessage 会触发滚动到用户消息)
+            // 1. 发送用户消息并更新历史记录 
             appendMessage({ role: 'user', content: userMessage }); 
             conversationHistory.push({ role: 'user', content: userMessage });
             messageInput.value = '';
+
+            // 💥 滚动策略 1: 用户消息发送后，立即滚动到底部
+            scrollChatToBottom(); 
 
             toggleLoadingState(true);
 
@@ -685,7 +703,8 @@
                     // 3. 更新历史记录
                     conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
                     
-                    // 4. 【已移除】AI 消息不再强制滚动到顶部 (符合用户要求)
+                    // 💥 滚动策略 2: AI 消息打字结束后，滚动到底部，确保全文可见
+                    scrollChatToBottom();
 
                 } else {
                     throw new Error(data.message.includes('not configured') 
@@ -696,6 +715,9 @@
                 console.error('Chat error:', error);
                 toggleLoadingState(false);
                 appendMessage({ role: 'error', content: `[Error] ${error.message}` });
+                // 💥 滚动策略 3: 错误消息出现后，滚动到底部
+                scrollChatToBottom();
+                
                 // 失败时移除最后一条用户消息
                 if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
                      conversationHistory.pop(); 
@@ -773,7 +795,9 @@
         newChatButton.addEventListener('click', () => {
             toggleLoadingState(false); 
             conversationHistory = []; 
+            // 重新设置聊天容器内容，并滚动到顶部（新对话）
             chatContainer.innerHTML = '<div class="chat-scroll-sentinel"></div>'; 
+            scrollChatToBottom(false); // 立即滚动到底部
         });
 
         // 显示配置/登录
