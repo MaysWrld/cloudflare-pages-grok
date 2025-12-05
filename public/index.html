@@ -94,12 +94,8 @@
             overflow-y: auto;
             padding-right: 10px;
             min-height: 0; 
-        }
-
-        /* 哨兵元素：用于保证聊天容器底部有一定的空间，但此处已改为用滚动到底部的方式 */
-        .chat-scroll-sentinel {
-            height: 60vh;
-            pointer-events: none;
+            /* 添加 padding-bottom 确保最后一条消息下方有空间 */
+            padding-bottom: 20px; 
         }
 
         /* 消息样式 */
@@ -394,8 +390,7 @@
             </div>
 
             <div id="chat-container" class="chat-container">
-                <div class="chat-scroll-sentinel"></div> 
-            </div>
+                </div>
 
             <div class="input-area">
                 <textarea id="message-input" placeholder="输入你的问题... (Shift+Enter 换行, Enter 发送)"></textarea>
@@ -552,8 +547,7 @@
                             targetElement.innerHTML += text.charAt(i);
                             i++;
                         }
-                        // 确保在打字过程中，如果用户在底部附近，内容会随之滚动
-                        scrollChatToBottom(false); // 使用非平滑滚动以避免抖动
+                        // ❗ 重点修改：移除打字机过程中的实时滚动
                         
                         setTimeout(type, TYPING_SPEED_MS); 
                     } else {
@@ -581,12 +575,9 @@
                 }
             }
             
-            // 始终在哨兵之前添加消息
-            const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
-            chatContainer.insertBefore(messageEl, sentinel);
+            // 消息追加到 chatContainer 的末尾
+            chatContainer.appendChild(messageEl);
             
-            // 移除消息级别的 scrollIntoView，统一由 scrollChatToBottom 处理
-
             return messageEl;
         }
 
@@ -795,8 +786,8 @@
         newChatButton.addEventListener('click', () => {
             toggleLoadingState(false); 
             conversationHistory = []; 
-            // 重新设置聊天容器内容，并滚动到顶部（新对话）
-            chatContainer.innerHTML = '<div class="chat-scroll-sentinel"></div>'; 
+            // 清空聊天容器内容，并滚动到顶部（新对话）
+            chatContainer.innerHTML = ''; 
             scrollChatToBottom(false); // 立即滚动到底部
         });
 
