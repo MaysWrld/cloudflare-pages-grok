@@ -1,4 +1,3 @@
-//public/index.html
 <!DOCTYPE html>
 <html lang="zh">
 <head>
@@ -6,7 +5,367 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Assistant</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        /* ========================================================== */
+        /* === 样式表 (CSS) 开始 === */
+        /* ========================================================== */
+
+        /* -------------------- 基础重置与字体 -------------------- */
+        body {
+            font-family: 'Roboto Mono', monospace;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden; /* 默认隐藏滚动条，由 chat-container 控制 */
+        }
+
+        /* -------------------- 主应用容器 (#main-app) -------------------- */
+        #main-app {
+            display: flex;
+            width: 100%;
+            max-width: 1400px;
+            height: 100%;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            background-color: #1a1a1a;
+            position: relative;
+            overflow: hidden; /* 阻止内容溢出 */
+        }
+
+        /* Logo 和标题 */
+        .logo-text {
+            color: #00c7e2;
+            font-size: 1.8em;
+            font-weight: 700;
+        }
+        .logo-text.mini {
+            font-size: 1.4em;
+            margin-bottom: 30px;
+        }
+
+        /* -------------------- 侧边栏 (#sidebar) -------------------- */
+        #sidebar {
+            width: 250px;
+            min-width: 180px; 
+            background-color: #191919;
+            padding: 20px;
+            border-right: 1px solid #222;
+            display: flex;
+            flex-direction: column; 
+            flex-shrink: 0; 
+        }
+
+        /* 侧边栏按钮 */
+        .sidebar-button {
+            padding: 12px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Roboto Mono', monospace;
+            transition: background-color 0.3s, opacity 0.3s;
+            text-align: left;
+        }
+        .sidebar-button.primary {
+            background-color: #00c7e2;
+            color: #121212;
+        }
+        .sidebar-button.secondary {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+        }
+
+        /* -------------------- 聊天区域 (#chat-area) -------------------- */
+        .chat-area {
+            flex-grow: 1; 
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* 聊天容器 (可滚动部分) */
+        .chat-container {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+            min-height: 0; 
+        }
+
+        .chat-scroll-sentinel {
+            height: 60vh;
+            pointer-events: none;
+        }
+
+        /* 消息样式 */
+        .message {
+            padding: 12px 18px; 
+            margin-bottom: 15px;
+            max-width: 80%;
+            border-radius: 20px; 
+            word-wrap: break-word;
+            animation-duration: 0.5s; 
+            animation-fill-mode: forwards;
+            opacity: 0; 
+        }
+        .message p { margin: 0; }
+        .message.user {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+            border-top-right-radius: 4px;
+        }
+        .message.assistant {
+            background-color: #2a2a2a;
+            color: #e0e0e0;
+            margin-right: auto;
+            border-top-left-radius: 4px; 
+            width: 0;
+            padding: 12px 0;
+            overflow: hidden; 
+        }
+        .message.error {
+            background-color: #440000;
+            border-left: 3px solid red;
+            color: #ffcccc;
+            margin-right: auto;
+            font-style: italic;
+            opacity: 1;
+            border-radius: 20px;
+            width: auto;
+        }
+        .message.assistant.loading {
+            background-color: #2a2a2a;
+            border-left: 3px solid #00c7e2;
+            color: #ccc;
+            font-style: italic;
+            width: auto;
+            opacity: 1;
+            padding: 12px 18px;
+            border-radius: 20px;
+        }
+        /* -------------------- 输入区域样式 -------------------- */
+        .input-area {
+            display: flex;
+            padding-top: 20px;
+            border-top: 1px solid #222;
+            flex-shrink: 0;
+        }
+        #message-input {
+            flex-grow: 1;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background-color: #222;
+            color: #e0e0e0;
+            font-family: 'Roboto Mono', monospace;
+            resize: none;
+            max-height: 150px;
+        }
+        .send-button {
+            padding: 15px 25px;
+            margin-left: 10px;
+            border: none;
+            border-radius: 8px;
+            background-color: #00c7e2;
+            color: #121212;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        /* 禁用状态 */
+        .send-button:disabled {
+            background-color: #3a3a3a;
+            cursor: not-allowed;
+            color: #666;
+        }
+
+        /* -------------------- 模态框样式 (Login/Admin) -------------------- */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center; /* 修复：确保卡片居中 */
+            align-items: center;
+            z-index: 2000;
+        }
+        .card {
+            background-color: #1a1a1a;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+            position: relative;
+            overflow-y: auto; 
+            max-height: 90vh;
+        }
+        .login-card {
+            width: 350px;
+            text-align: center;
+        }
+        .admin-card {
+            width: 90%;
+            max-width: 600px;
+        }
+        .neon-title {
+            color: #00c7e2;
+            text-shadow: 0 0 5px #00c7e280;
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+        .close-button {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 2em;
+            color: #888;
+            cursor: pointer;
+        }
+        /* 输入组样式统一，解决乱码问题 */
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #ccc;
+            font-weight: 700;
+        }
+        .input-group input[type="text"],
+        .input-group input[type="password"],
+        .input-group input[type="url"],
+        .input-group input[type="number"],
+        .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 6px;
+            background-color: #222;
+            color: #e0e0e0; /* 修复：确保输入框文字颜色正确 */
+            font-family: 'Roboto Mono', monospace;
+            box-sizing: border-box;
+            margin-bottom: 5px; 
+            display: block; 
+        }
+        .input-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        .input-group small {
+            display: block;
+            margin-top: 5px;
+            font-size: 0.8em;
+            color: #999;
+        }
+        .submit-button {
+            width: 100%;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            background-color: #00c7e2;
+            color: #121212;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+
+        /* -------------------- 响应式设计 -------------------- */
+
+        /* 移动端头部 (默认隐藏) */
+        .mobile-header {
+            display: none;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #222;
+            margin-bottom: 10px;
+        }
+        .mobile-only { display: none; }
+        .desktop-only { display: block; }
+
+        @media (max-width: 768px) {
+            /* 桌面端按钮隐藏，移动端按钮显示 */
+            .desktop-only { display: none !important; }
+            .mobile-only { display: block !important; }
+            
+            /* 修复 body 居中问题 */
+            body {
+                justify-content: flex-start;
+                align-items: flex-start;
+            }
+
+            #main-app {
+                height: 100vh; 
+                flex-direction: column; 
+            }
+            
+            /* 移动端头部显示 */
+            .mobile-header {
+                display: flex;
+            }
+            .mobile-header #toggle-sidebar {
+                padding: 8px 12px;
+                font-size: 1.5em;
+                margin-right: 15px;
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: none;
+            }
+            .mobile-header .logo-text.mini {
+                margin-bottom: 0;
+            }
+            
+            /* 侧边栏伸缩逻辑 */
+            #sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 0; 
+                min-width: 0;
+                overflow: hidden; 
+                padding: 0; 
+                border-right: none;
+                transition: width 0.3s ease, padding 0.3s ease;
+                background-color: #191919;
+                z-index: 500; 
+            }
+
+            #sidebar.open {
+                width: 250px; 
+                padding: 20px;
+                box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5);
+            }
+            
+            .chat-area {
+                padding: 10px;
+                flex: 1; 
+                min-height: 0; 
+            }
+            
+            .chat-container {
+                padding-right: 0;
+            }
+            
+            .message {
+                max-width: 95%;
+            }
+            
+            .input-area {
+                padding: 10px 0;
+            }
+
+            .admin-card {
+                width: 95%;
+                margin: 20px;
+            }
+        }
+        /* ========================================================== */
+        /* === 样式表 (CSS) 结束 === */
+        /* ========================================================== */
+    </style>
 </head>
 <body>
 
@@ -93,6 +452,461 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        /* ========================================================== */
+        /* === JavaScript (JS) 开始 === */
+        /* ========================================================== */
+
+        // --- 全局状态 ---
+        let conversationHistory = []; 
+        let basicAuthHeader = null; 
+        const TYPING_SPEED_MS = 1; 
+
+        // --- DOM 元素映射 ---
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendButton = document.getElementById('send-button');
+        const sidebar = document.getElementById('sidebar');
+        const assistantLogo = document.getElementById('assistant-logo');
+        const mobileLogo = document.getElementById('mobile-logo');
+
+        // 模态框相关
+        const modalOverlay = document.getElementById('modal-overlay');
+        const loginCard = document.getElementById('login-card');
+        const adminPanel = document.getElementById('admin-panel');
+        const loginForm = document.getElementById('login-form');
+        const configForm = document.getElementById('config-form');
+
+        // 按钮
+        const newChatButton = document.getElementById('new-chat-button');
+        const showConfigButton = document.getElementById('show-config-button');
+        const logoutButton = document.getElementById('logout-button');
+        const toggleSidebarButton = document.getElementById('toggle-sidebar');
+
+
+        let loadingMessageEl = null; 
+        let countdownInterval = null; 
+
+        // --- 工具函数 ---
+
+        /**
+         * 切换模态框显示状态
+         * @param {string} cardId - 要显示的卡片ID ('login-card' 或 'admin-panel')
+         */
+        function showModal(cardId) {
+            modalOverlay.style.display = 'flex';
+            loginCard.style.display = (cardId === 'login-card') ? 'block' : 'none';
+            adminPanel.style.display = (cardId === 'admin-panel') ? 'block' : 'none';
+        }
+
+        function hideModal() {
+            modalOverlay.style.display = 'none';
+            loginCard.style.display = 'none';
+            adminPanel.style.display = 'none';
+        }
+
+        /**
+         * 切换侧边栏状态（仅限移动端）
+         */
+        function toggleSidebar() {
+            if (window.innerWidth <= 768) {
+                sidebar.classList.toggle('open');
+                const isOpen = sidebar.classList.contains('open');
+                toggleSidebarButton.textContent = isOpen ? '✕' : '☰';
+                document.body.style.overflow = isOpen ? 'hidden' : '';
+            }
+        }
+
+        /**
+         * 实现打字机效果
+         */
+        function typeWriterEffect(targetElement, text) {
+            // 确保内容显示前清空
+            targetElement.innerHTML = ''; 
+            return new Promise(resolve => {
+                let i = 0;
+                
+                function type() {
+                    if (i < text.length) {
+                        // 处理 <br> 标签
+                        if (text.substring(i, i + 4) === '<br>') {
+                            targetElement.innerHTML += '<br>';
+                            i += 4;
+                        } else {
+                            targetElement.innerHTML += text.charAt(i);
+                            i++;
+                        }
+                        setTimeout(type, TYPING_SPEED_MS); 
+                    } else {
+                        resolve();
+                    }
+                }
+                type();
+            });
+        }
+
+        /**
+         * 将消息添加到聊天容器
+         * @param {object} message - { role: 'user'/'assistant'/'error'/'loading', content: string }
+         */
+        function appendMessage(message) {
+            const messageEl = document.createElement('div');
+            messageEl.classList.add('message', message.role);
+
+            if (message.role === 'assistant' || message.role === 'error' || message.role === 'user') {
+                // 修复：消息内容只在非加载状态时写入 p 标签
+                const content = message.content.replace(/\n/g, '<br>');
+                messageEl.innerHTML = `<p>${content}</p>`;
+                messageEl.classList.add('animate-in');
+            }
+            
+            // 始终在哨兵之前添加消息
+            const sentinel = chatContainer.querySelector('.chat-scroll-sentinel');
+            chatContainer.insertBefore(messageEl, sentinel);
+            
+            // 滚动逻辑：用户消息置顶，加载消息置底确保可见
+            if (message.role === 'user' || message.role === 'error' || message.role === 'loading') {
+                requestAnimationFrame(() => {
+                    // 用户消息和加载消息置顶或置底
+                    messageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            }
+
+            return messageEl;
+        }
+
+        /**
+         * 状态管理
+         */
+        function toggleLoadingState(isLoading) {
+            messageInput.disabled = isLoading;
+            sendButton.disabled = isLoading;
+            
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+                countdownInterval = null;
+            }
+
+            if (isLoading) {
+                let count = 30;
+                
+                loadingMessageEl = appendMessage({ role: 'loading', content: `深度思考中，预计 ${count} 秒...` });
+                
+                const updateCountdown = () => {
+                    count--;
+                    if (loadingMessageEl) {
+                        if (count >= 0) {
+                            loadingMessageEl.querySelector('p').textContent = `深度思考中，预计 ${count} 秒...`;
+                        } else {
+                            loadingMessageEl.querySelector('p').textContent = `深度思考中，请稍候...`;
+                            clearInterval(countdownInterval);
+                        }
+                    }
+                };
+
+                countdownInterval = setInterval(updateCountdown, 1000);
+                sendButton.textContent = '思考中...';
+            } else {
+                sendButton.textContent = '发送';
+                if (loadingMessageEl) {
+                    loadingMessageEl.remove();
+                    loadingMessageEl = null;
+                }
+            }
+        }
+
+        // --- 核心业务逻辑 ---
+
+        /**
+         * 认证和 UI 管理
+         */
+        function updateAdminUI(isLoggedIn) {
+            logoutButton.style.display = isLoggedIn ? 'block' : 'none';
+        }
+
+        function updateLogoName(name) {
+            if (assistantLogo) assistantLogo.textContent = name;
+            if (mobileLogo) mobileLogo.textContent = name;
+        }
+
+        function initPage() {
+            const authData = localStorage.getItem('basicAuth');
+            if (authData) {
+                basicAuthHeader = authData;
+                updateAdminUI(true);
+                // 尝试获取配置以更新 Logo
+                fetchConfig(true); 
+            } else {
+                basicAuthHeader = null;
+                updateAdminUI(false);
+            }
+        }
+
+        /**
+         * 聊天功能
+         */
+        async function sendMessage() {
+            const userMessage = messageInput.value.trim();
+            if (!userMessage) return;
+
+            appendMessage({ role: 'user', content: userMessage }); 
+            conversationHistory.push({ role: 'user', content: userMessage });
+            messageInput.value = '';
+
+            toggleLoadingState(true);
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: conversationHistory }) 
+                });
+
+                if (response.status === 401 && !basicAuthHeader) {
+                    throw new Error('聊天 API 未授权。');
+                }
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    const assistantReply = data.reply;
+                    
+                    // 1. 移除加载状态
+                    toggleLoadingState(false);
+
+                    // 2. 添加 AI 消息，并开始打字机效果
+                    const assistantMessageEl = appendMessage({ role: 'assistant', content: '' }); // 空内容，等待打字机填充
+                    const textTarget = assistantMessageEl.querySelector('p');
+
+                    await typeWriterEffect(textTarget, assistantReply);
+                    
+                    // 3. 更新历史记录
+                    conversationHistory.push({ role: 'assistant', content: assistantReply.replace(/<br>/g, '\n') });
+                    
+                    // 4. AI 消息置顶
+                    requestAnimationFrame(() => {
+                         assistantMessageEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    });
+
+                } else {
+                    throw new Error(data.message.includes('not configured') 
+                        ? 'AI 助手尚未配置。请联系管理员设置。' 
+                        : data.message);
+                }
+            } catch (error) {
+                console.error('Chat error:', error);
+                toggleLoadingState(false);
+                appendMessage({ role: 'error', content: `[Error] ${error.message}` });
+                // 失败时移除最后一条用户消息
+                if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
+                     conversationHistory.pop(); 
+                }
+            }
+        }
+
+        /**
+         * 配置管理
+         */
+        async function fetchConfig(updateLogoOnly = false) {
+            if (!basicAuthHeader) return;
+            
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'GET',
+                    headers: { 'Authorization': basicAuthHeader }
+                });
+                
+                if (response.status === 401) {
+                    throw new Error('登录已过期，请重新登录。');
+                }
+
+                const data = await response.json();
+
+                if (data.success && data.config) {
+                    const config = data.config;
+                    
+                    updateLogoName(config.name || 'AI Assistant');
+
+                    if (!updateLogoOnly) {
+                        // 填充表单
+                        document.getElementById('assistant-name').value = config.name || '';
+                        document.getElementById('api-key').value = config.apiKey || ''; 
+                        document.getElementById('api-endpoint').value = config.apiEndpoint || '';
+                        document.getElementById('model-name').value = config.model || ''; 
+                        document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
+                        document.getElementById('system-instruction').value = config.systemInstruction || '';
+                    }
+                } else if (!updateLogoOnly) {
+                    console.error('Failed to fetch config:', data.message);
+                }
+            } catch (error) {
+                console.error('Error fetching config:', error);
+                if (error.message.includes('过期')) {
+                    alert(error.message);
+                    localStorage.removeItem('basicAuth');
+                    basicAuthHeader = null;
+                    updateAdminUI(false);
+                    hideModal();
+                } else if (!updateLogoOnly) {
+                    alert('无法连接到配置 API。');
+                }
+            }
+        }
+
+
+        // --- 事件监听器 ---
+
+        // 聊天输入/发送
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (!sendButton.disabled) sendMessage();
+            }
+        });
+
+        // 模态框关闭
+        document.querySelectorAll('.close-button').forEach(btn => {
+            btn.addEventListener('click', hideModal);
+        });
+
+        // 新建对话
+        newChatButton.addEventListener('click', () => {
+            toggleLoadingState(false); 
+            conversationHistory = []; 
+            chatContainer.innerHTML = '<div class="chat-scroll-sentinel"></div>'; 
+        });
+
+        // 显示配置/登录
+        showConfigButton.addEventListener('click', () => {
+            // 手机端点击后关闭侧边栏
+            if (sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+            
+            if (basicAuthHeader) {
+                showModal('admin-panel');
+                fetchConfig(); 
+            } else {
+                showModal('login-card');
+            }
+        });
+
+        // 侧边栏伸缩
+        toggleSidebarButton.addEventListener('click', toggleSidebar);
+
+        // 侧边栏按钮点击后关闭侧边栏
+        sidebar.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && e.target.classList.contains('sidebar-button')) {
+                setTimeout(toggleSidebar, 300); 
+            }
+        });
+
+
+        // 登录
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = e.target.username.value;
+            const password = e.target.password.value;
+            
+            const authString = btoa(`${username}:${password}`);
+            const authHeader = `Basic ${authString}`;
+
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authHeader 
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    localStorage.setItem('basicAuth', authHeader);
+                    basicAuthHeader = authHeader;
+                    updateAdminUI(true);
+                    
+                    hideModal();
+                    showModal('admin-panel');
+                    fetchConfig();
+
+                } else {
+                    alert('登录失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('登录过程中发生错误。');
+            }
+        });
+
+        // 登出
+        logoutButton.addEventListener('click', () => {
+            localStorage.removeItem('basicAuth');
+            basicAuthHeader = null;
+            updateAdminUI(false);
+            alert('已登出管理员账户。');
+        });
+
+        // 保存配置
+        configForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!basicAuthHeader) return alert('请先登录管理员账户。');
+
+            const configData = {
+                name: e.target.name.value,
+                apiKey: e.target.apiKey.value, 
+                apiEndpoint: e.target.apiEndpoint.value, 
+                model: e.target.model.value,
+                temperature: parseFloat(e.target.temperature.value), 
+                systemInstruction: e.target.systemInstruction.value,
+            };
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': basicAuthHeader
+                    },
+                    body: JSON.stringify(configData)
+                });
+
+                if (response.status === 401) {
+                     throw new Error('登录已过期，请重新登录。');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('配置保存成功！');
+                    updateLogoName(configData.name);
+                    hideModal();
+                } else {
+                    alert('保存配置失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Save config error:', error);
+                if (error.message.includes('过期')) {
+                    alert(error.message);
+                    localStorage.removeItem('basicAuth');
+                    basicAuthHeader = null;
+                    updateAdminUI(false);
+                    hideModal();
+                } else {
+                    alert('保存配置过程中发生错误。');
+                }
+            }
+        });
+
+
+        // 页面加载时执行初始化
+        initPage();
+        /* ========================================================== */
+        /* === JavaScript (JS) 结束 === */
+        /* ========================================================== */
+    </script>
 </body>
 </html>
