@@ -436,12 +436,12 @@
                 <div class="input-group">
                     <label for="api-endpoint">AI API 端点 (URL)</label>
                     <input type="url" id="api-endpoint" name="apiEndpoint" required>
-                    <small>完整的 POST 请求 URL。</small>
+                    <small>完整的 POST 请求 URL (例如: https://api.openai.com/v1/chat/completions)。</small>
                 </div>
                 <div class="input-group">
                     <label for="api-key">API Key</label>
                     <input type="password" id="api-key" name="apiKey" required>
-                    <small>用于 Bearer 认证的密钥。</small>
+                    <small>用于 Bearer 认证的密钥 (例如: sk-...)。</small>
                 </div>
                 <div class="input-group">
                     <label for="model-name">模型名称</label>
@@ -495,7 +495,7 @@
         let countdownInterval = null; 
 
         // -------------------------------------------------------------
-        // === Matrix 数字雨效果代码 ===
+        // === Matrix 数字雨效果代码 (保持不变) ===
         // -------------------------------------------------------------
         const canvas = document.getElementById('matrix-canvas');
         const ctx = canvas.getContext('2d');
@@ -588,7 +588,6 @@
             }
         }
 
-
         /**
          * 切换模态框显示状态
          */
@@ -615,7 +614,6 @@
                 let i = 0;
                 function type() {
                     if (i < text.length) {
-                        // 确保换行符被正确处理
                         if (text.substring(i, i + 4) === '<br>') {
                             targetElement.innerHTML += '<br>';
                             i += 4;
@@ -699,7 +697,7 @@
         }
 
         /**
-         * 获取 AI 配置
+         * 获取 AI 配置 (从本地存储模拟加载)
          */
         function getAiConfig() {
             const configString = localStorage.getItem(CONFIG_KEY);
@@ -707,10 +705,10 @@
         }
 
 
-        // --- 核心业务逻辑：API 调用部分修复 ---
+        // --- 核心业务逻辑：API 调用部分 ---
 
         /**
-         * 聊天功能 (核心修改)
+         * 聊天功能
          */
         async function sendMessage() {
             const userMessage = messageInput.value.trim();
@@ -719,7 +717,7 @@
             const config = getAiConfig();
 
             if (!config || !config.apiEndpoint || !config.apiKey) {
-                alert('错误：API 配置不完整，请先点击配置按钮进行设置和保存。');
+                alert('错误：API 配置不完整，请先点击配置按钮登录并保存设置。');
                 return;
             }
             
@@ -760,14 +758,11 @@
                 toggleLoadingState(false);
 
                 if (!response.ok) {
-                    // 尝试读取错误信息
                     let errorDetails = `HTTP 错误 ${response.status} (${response.statusText})`;
                     try {
                         const errorJson = await response.json();
                         errorDetails += `: ${errorJson.error.message || JSON.stringify(errorJson)}`;
-                    } catch (e) {
-                        // 忽略解析错误
-                    }
+                    } catch (e) {}
                     throw new Error(errorDetails);
                 }
 
@@ -784,7 +779,6 @@
                 const assistantMessageEl = appendMessage({ role: 'assistant', content: '' });
                 const textTarget = assistantMessageEl.querySelector('p');
                 
-                // API 回复中的换行符 ('\n') 转换为 HTML <br>
                 const formattedReply = assistantReply.replace(/\n/g, '<br>');
 
                 await typeWriterEffect(textTarget, formattedReply);
@@ -796,16 +790,19 @@
             } catch (error) {
                 console.error('Chat error:', error);
                 toggleLoadingState(false);
-                appendMessage({ role: 'error', content: `[API Error] ${error.message}` });
+                // 针对 API 错误的提示
+                appendMessage({ role: 'error', content: `[API Error] 无法获取回复: ${error.message}` });
                 scrollChatToBottom();
                 
-                // 失败时移除最后一条用户消息
+                // 失败时移除最后一条用户消息，以便用户重试
                 if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
                      conversationHistory.pop(); 
                 }
             }
         }
 
+
+        // --- 管理员 UI/配置逻辑 (恢复原有模拟服务器端交互的结构) ---
 
         /**
          * 认证和 UI 管理
@@ -831,7 +828,8 @@
                 basicAuthHeader = null;
                 updateAdminUI(false);
             }
-            // 确保页面加载时配置被初始化 (如果之前保存过)
+            
+            // 页面加载时根据本地存储的配置更新 Logo 名称
             const config = getAiConfig();
             if (config) {
                 updateLogoName(config.name || 'AI Assistant');
@@ -841,27 +839,29 @@
 
         /**
          * 配置管理：从服务器/本地加载配置
+         * (此函数模拟了向 /api/config 发送 GET 请求，但实际数据来自本地存储)
          */
         async function fetchConfig(updateLogoOnly = false) {
-            // 首先尝试从本地存储加载配置
-            const localConfig = getAiConfig();
-
-            if (localConfig) {
-                updateLogoName(localConfig.name || 'AI Assistant');
+            // 假设我们有一个 /api/config 端点，但为了前端独立运行，我们使用本地存储来模拟配置数据。
+            if (!basicAuthHeader && !updateLogoOnly) {
+                 // 如果未登录，只加载本地存储数据填充表单
+            }
+            
+            const config = getAiConfig();
+            
+            if (config) {
+                updateLogoName(config.name || 'AI Assistant');
                 if (!updateLogoOnly) {
-                    document.getElementById('assistant-name').value = localConfig.name || '';
-                    document.getElementById('api-key').value = localConfig.apiKey || ''; 
-                    document.getElementById('api-endpoint').value = localConfig.apiEndpoint || '';
-                    document.getElementById('model-name').value = localConfig.model || ''; 
-                    document.getElementById('temperature').value = localConfig.temperature !== undefined && localConfig.temperature !== null ? localConfig.temperature : 0.7; 
-                    document.getElementById('system-instruction').value = localConfig.systemInstruction || '';
+                    document.getElementById('assistant-name').value = config.name || '';
+                    document.getElementById('api-key').value = config.apiKey || ''; 
+                    document.getElementById('api-endpoint').value = config.apiEndpoint || '';
+                    document.getElementById('model-name').value = config.model || ''; 
+                    document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
+                    document.getElementById('system-instruction').value = config.systemInstruction || '';
                 }
             } else if (!updateLogoOnly) {
-                 // 如果本地没有配置，则设置默认值或空值
                  document.getElementById('temperature').value = 0.7;
             }
-
-            // 理论上这里应该有服务器端配置加载逻辑 (如果需要)，但在没有后端的情况下，我们依赖本地存储。
         }
 
 
@@ -896,13 +896,11 @@
                 showModal('admin-panel');
                 fetchConfig(); 
             } else {
-                // 简化：如果不需要登录管理配置，直接显示配置面板
-                showModal('admin-panel'); 
-                fetchConfig();
+                showModal('login-card');
             }
         });
 
-        // 登录/登出 (此处假设 /api/login 是用于获取管理员权限的，如果不需要后端登录，可以移除)
+        // 登录 (模拟 /api/login 验证)
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = e.target.username.value;
@@ -911,35 +909,19 @@
             const authString = btoa(`${username}:${password}`);
             const authHeader = `Basic ${authString}`;
 
-            try {
-                // 模拟登录请求 (此处的 /api/login 需要您的后端支持)
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': authHeader 
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    localStorage.setItem('basicAuth', authHeader);
-                    basicAuthHeader = authHeader;
-                    updateAdminUI(true);
-                    
-                    hideModal();
-                    showModal('admin-panel');
-                    fetchConfig();
-
-                } else {
-                    alert('登录失败: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                alert('登录过程中发生错误，请检查后端服务。');
+            // 模拟登录成功，实际项目中这里需要调用您的后端 /api/login 接口
+            if (username === 'admin' && password === '123456') { 
+                localStorage.setItem('basicAuth', authHeader);
+                basicAuthHeader = authHeader;
+                updateAdminUI(true);
+                
+                hideModal();
+                showModal('admin-panel');
+                fetchConfig();
+            } else {
+                alert('登录失败: 用户名或密码错误 (模拟验证)');
             }
+            e.target.reset(); // 清空表单
         });
 
         logoutButton.addEventListener('click', () => {
@@ -949,7 +931,7 @@
             alert('已登出管理员账户。');
         });
 
-        // 保存配置
+        // 保存配置 (模拟 /api/config POST)
         configForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -962,16 +944,19 @@
                 systemInstruction: e.target.systemInstruction.value,
             };
 
-            // 将配置保存到本地存储
+            // 模拟服务器端保存成功，实际是保存到本地存储
             localStorage.setItem(CONFIG_KEY, JSON.stringify(configData));
-            updateLogoName(configData.name);
-            alert('配置已成功保存到本地存储！');
-            hideModal();
             
-            // 假设这里可以有一个可选的服务器端保存逻辑
-            // if (basicAuthHeader) { 
-            //     await fetch('/api/config', { ... });
-            // }
+            // 模拟向后端发送配置 (如果需要)
+            if (basicAuthHeader) {
+                // try { 
+                //     await fetch('/api/config', { method: 'POST', ... });
+                // } catch(e) {}
+            }
+            
+            alert('配置已保存成功！');
+            updateLogoName(configData.name);
+            hideModal();
         });
 
 
