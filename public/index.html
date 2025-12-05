@@ -122,9 +122,8 @@
             position: relative; 
             z-index: 1;
             
-            /* >>>>>>>>>>>>> 核心修改: 恢复内容从上向下堆叠 <<<<<<<<<<<<< */
-            display: block; /* 恢复块级流，新消息在底部 */
-            /* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+            /* 标准堆叠：新消息在底部 */
+            display: block; 
         }
 
         /* 初始内容居中显示 (当没有消息时) */
@@ -165,7 +164,12 @@
             opacity: 0; 
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5); 
         }
-        .message p { margin: 0; }
+        .message p { 
+            margin: 0; 
+            /* 确保在打字机效果中，内容不会溢出 */
+            overflow-wrap: break-word; 
+            word-break: break-word;
+        }
         
         /* 用户消息 (右侧) */
         .message.user {
@@ -182,9 +186,8 @@
             color: #e0e0e0;
             margin-right: auto;
             border-top-left-radius: 4px; 
-            /* 修复 1: 移除 width: 0 和 padding 0，让其正常显示，在打字机 JS 中控制内容显示 */
             padding: 12px 18px; 
-            opacity: 1;
+            opacity: 0; /* 初始不可见，等待打字机效果 */
             overflow: visible; 
         }
         
@@ -467,6 +470,7 @@
         let conversationHistory = []; 
         let basicAuthHeader = null; 
         const TYPING_SPEED_MS = 1; 
+        const CONFIG_KEY = 'aiConfig'; // 用于存储 API 配置
 
         // --- DOM 元素映射 ---
         const chatContainer = document.getElementById('chat-container');
@@ -474,7 +478,6 @@
         const sendButton = document.getElementById('send-button');
         const assistantLogo = document.getElementById('assistant-logo');
         const initialMessageContainer = document.getElementById('initial-message-container');
-        const chatArea = document.getElementById('chat-area');
 
         // 模态框相关
         const modalOverlay = document.getElementById('modal-overlay');
@@ -563,7 +566,6 @@
          */
         function scrollChatToBottom(smooth = true) {
             requestAnimationFrame(() => {
-                // 恢复标准滚动逻辑
                 chatContainer.scrollTo({
                     top: chatContainer.scrollHeight,
                     behavior: smooth ? 'smooth' : 'auto'
@@ -578,11 +580,9 @@
             const hasMessages = conversationHistory.length > 0 || chatContainer.children.length > 0;
             
             if (hasMessages) {
-                // 有消息时，隐藏居中提示
                 initialMessageContainer.style.opacity = '0';
                 initialMessageContainer.style.pointerEvents = 'none';
             } else {
-                // 无消息时，显示居中提示
                 initialMessageContainer.style.opacity = '1';
                 initialMessageContainer.style.pointerEvents = 'auto'; 
             }
@@ -605,11 +605,11 @@
         }
 
         /**
-         * 实现打字机效果 (修复 2: 确保打字机过程中能正常显示内容)
+         * 实现打字机效果
          */
         function typeWriterEffect(targetElement, text) {
             targetElement.innerHTML = ''; 
-            targetElement.parentElement.style.opacity = '1'; // 确保父级消息元素可见
+            targetElement.parentElement.style.opacity = '1'; 
             
             return new Promise(resolve => {
                 let i = 0;
@@ -623,7 +623,6 @@
                             targetElement.innerHTML += text.charAt(i);
                             i++;
                         }
-                        // 打字机过程中进行滚动，确保用户能看到新内容
                         scrollChatToBottom(false); 
                         setTimeout(type, TYPING_SPEED_MS); 
                     } else {
@@ -646,11 +645,9 @@
                 messageEl.innerHTML = `<p>${content}</p>`;
                 
                 if (message.role === 'user' || message.role === 'error' || message.role === 'loading') {
-                    // 用户消息、错误、加载消息直接显示
                     messageEl.style.opacity = '1';
                 } else if (message.role === 'assistant') {
-                    // 助手消息，先插入容器，打字机时再填充内容
-                    messageEl.style.opacity = '0'; // 初始不可见，等待打字机效果
+                    messageEl.style.opacity = '0'; 
                 }
             }
             
@@ -701,7 +698,114 @@
             }
         }
 
-        // --- 核心业务逻辑 ---
+        /**
+         * 获取 AI 配置
+         */
+        function getAiConfig() {
+            const configString = localStorage.getItem(CONFIG_KEY);
+            return configString ? JSON.parse(configString) : null;
+        }
+
+
+        // --- 核心业务逻辑：API 调用部分修复 ---
+
+        /**
+         * 聊天功能 (核心修改)
+         */
+        async function sendMessage() {
+            const userMessage = messageInput.value.trim();
+            if (!userMessage) return;
+            
+            const config = getAiConfig();
+
+            if (!config || !config.apiEndpoint || !config.apiKey) {
+                alert('错误：API 配置不完整，请先点击配置按钮进行设置和保存。');
+                return;
+            }
+            
+            // 1. 发送用户消息并更新历史记录 
+            appendMessage({ role: 'user', content: userMessage }); 
+            conversationHistory.push({ role: 'user', content: userMessage });
+            messageInput.value = '';
+            scrollChatToBottom(); 
+
+            toggleLoadingState(true);
+
+            try {
+                // 构造 API 请求体
+                const messages = [];
+                // 插入 System Instruction
+                if (config.systemInstruction) {
+                    messages.push({ role: "system", content: config.systemInstruction });
+                }
+                // 插入历史对话
+                messages.push(...conversationHistory);
+
+                const requestBody = {
+                    model: config.model || "gpt-4o",
+                    messages: messages,
+                    temperature: config.temperature !== undefined ? config.temperature : 0.7,
+                };
+                
+                // 发送请求到实际 API
+                const response = await fetch(config.apiEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${config.apiKey}` // 使用配置的 API Key
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                toggleLoadingState(false);
+
+                if (!response.ok) {
+                    // 尝试读取错误信息
+                    let errorDetails = `HTTP 错误 ${response.status} (${response.statusText})`;
+                    try {
+                        const errorJson = await response.json();
+                        errorDetails += `: ${errorJson.error.message || JSON.stringify(errorJson)}`;
+                    } catch (e) {
+                        // 忽略解析错误
+                    }
+                    throw new Error(errorDetails);
+                }
+
+                const data = await response.json();
+                
+                // 假设 API 返回的结构是标准的 OpenAI 格式
+                const assistantReply = data.choices[0]?.message?.content || "API 返回了空回复。";
+                
+                if (assistantReply === "API 返回了空回复。") {
+                    throw new Error("API 响应格式错误或返回了空内容。");
+                }
+                
+                // 2. 插入 AI 消息容器，并开始打字机效果
+                const assistantMessageEl = appendMessage({ role: 'assistant', content: '' });
+                const textTarget = assistantMessageEl.querySelector('p');
+                
+                // API 回复中的换行符 ('\n') 转换为 HTML <br>
+                const formattedReply = assistantReply.replace(/\n/g, '<br>');
+
+                await typeWriterEffect(textTarget, formattedReply);
+                
+                // 3. 打字结束后，更新历史记录
+                conversationHistory.push({ role: 'assistant', content: assistantReply });
+                scrollChatToBottom();
+
+            } catch (error) {
+                console.error('Chat error:', error);
+                toggleLoadingState(false);
+                appendMessage({ role: 'error', content: `[API Error] ${error.message}` });
+                scrollChatToBottom();
+                
+                // 失败时移除最后一条用户消息
+                if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
+                     conversationHistory.pop(); 
+                }
+            }
+        }
+
 
         /**
          * 认证和 UI 管理
@@ -714,6 +818,9 @@
             if (assistantLogo) assistantLogo.textContent = name;
         }
 
+        /**
+         * 页面初始化
+         */
         function initPage() {
             const authData = localStorage.getItem('basicAuth');
             if (authData) {
@@ -724,110 +831,41 @@
                 basicAuthHeader = null;
                 updateAdminUI(false);
             }
+            // 确保页面加载时配置被初始化 (如果之前保存过)
+            const config = getAiConfig();
+            if (config) {
+                updateLogoName(config.name || 'AI Assistant');
+            }
             updateChatDisplay(); 
         }
 
         /**
-         * 聊天功能
-         */
-        async function sendMessage() {
-            const userMessage = messageInput.value.trim();
-            if (!userMessage) return;
-
-            // 1. 发送用户消息并更新历史记录 
-            appendMessage({ role: 'user', content: userMessage }); 
-            conversationHistory.push({ role: 'user', content: userMessage });
-            messageInput.value = '';
-            scrollChatToBottom(); // 发送用户消息后立即滚动到底部
-
-            toggleLoadingState(true);
-
-            try {
-                // 模拟 API 调用
-                await new Promise(resolve => setTimeout(resolve, 1500)); 
-                
-                // 模拟成功回复 (内容包含换行测试)
-                const assistantReply = "收到您的指令！\n\n我已经将消息列表修改为**从上向下堆叠**（新消息在底部）。同时，我也优化了 AI 回复的打字机效果。\n\n现在您可以确认消息是否正常显示了。";
-                
-                toggleLoadingState(false);
-
-                // 2. 插入 AI 消息容器，初始内容为空，opacity=0
-                const assistantMessageEl = appendMessage({ role: 'assistant', content: '' });
-                const textTarget = assistantMessageEl.querySelector('p');
-
-                // 3. 开始打字机效果，并确保滚动跟随
-                await typeWriterEffect(textTarget, assistantReply.replace(/\n/g, '<br>'));
-                
-                // 4. 打字结束后，更新历史记录
-                conversationHistory.push({ role: 'assistant', content: assistantReply });
-                
-                // 💥 滚动策略：AI 消息打字结束后，确保滚动到底部
-                scrollChatToBottom();
-
-            } catch (error) {
-                console.error('Chat error:', error);
-                toggleLoadingState(false);
-                appendMessage({ role: 'error', content: `[Error] ${error.message}` });
-                // 💥 滚动策略：错误消息出现后，滚动到底部
-                scrollChatToBottom();
-                
-                // 失败时移除最后一条用户消息
-                if (conversationHistory.length > 0 && conversationHistory[conversationHistory.length - 1].role === 'user') {
-                     conversationHistory.pop(); 
-                }
-            }
-        }
-
-        /**
-         * 配置管理 (保持不变)
+         * 配置管理：从服务器/本地加载配置
          */
         async function fetchConfig(updateLogoOnly = false) {
-            if (!basicAuthHeader) return;
-            
-            try {
-                const response = await fetch('/api/config', {
-                    method: 'GET',
-                    headers: { 'Authorization': basicAuthHeader }
-                });
-                
-                if (response.status === 401) {
-                    throw new Error('登录已过期，请重新登录。');
-                }
+            // 首先尝试从本地存储加载配置
+            const localConfig = getAiConfig();
 
-                const data = await response.json();
-
-                if (data.success && data.config) {
-                    const config = data.config;
-                    
-                    updateLogoName(config.name || 'AI Assistant');
-
-                    if (!updateLogoOnly) {
-                        document.getElementById('assistant-name').value = config.name || '';
-                        document.getElementById('api-key').value = config.apiKey || ''; 
-                        document.getElementById('api-endpoint').value = config.apiEndpoint || '';
-                        document.getElementById('model-name').value = config.model || ''; 
-                        document.getElementById('temperature').value = config.temperature !== undefined && config.temperature !== null ? config.temperature : 0.7; 
-                        document.getElementById('system-instruction').value = config.systemInstruction || '';
-                    }
-                } else if (!updateLogoOnly) {
-                    console.error('Failed to fetch config:', data.message);
+            if (localConfig) {
+                updateLogoName(localConfig.name || 'AI Assistant');
+                if (!updateLogoOnly) {
+                    document.getElementById('assistant-name').value = localConfig.name || '';
+                    document.getElementById('api-key').value = localConfig.apiKey || ''; 
+                    document.getElementById('api-endpoint').value = localConfig.apiEndpoint || '';
+                    document.getElementById('model-name').value = localConfig.model || ''; 
+                    document.getElementById('temperature').value = localConfig.temperature !== undefined && localConfig.temperature !== null ? localConfig.temperature : 0.7; 
+                    document.getElementById('system-instruction').value = localConfig.systemInstruction || '';
                 }
-            } catch (error) {
-                console.error('Error fetching config:', error);
-                if (error.message.includes('过期')) {
-                    alert(error.message);
-                    localStorage.removeItem('basicAuth');
-                    basicAuthHeader = null;
-                    updateAdminUI(false);
-                    hideModal();
-                } else if (!updateLogoOnly) {
-                    alert('无法连接到配置 API。');
-                }
+            } else if (!updateLogoOnly) {
+                 // 如果本地没有配置，则设置默认值或空值
+                 document.getElementById('temperature').value = 0.7;
             }
+
+            // 理论上这里应该有服务器端配置加载逻辑 (如果需要)，但在没有后端的情况下，我们依赖本地存储。
         }
 
 
-        // --- 事件监听器 (保持不变) ---
+        // --- 事件监听器 ---
 
         // 聊天输入/发送
         sendButton.addEventListener('click', sendMessage);
@@ -858,11 +896,13 @@
                 showModal('admin-panel');
                 fetchConfig(); 
             } else {
-                showModal('login-card');
+                // 简化：如果不需要登录管理配置，直接显示配置面板
+                showModal('admin-panel'); 
+                fetchConfig();
             }
         });
 
-        // 登录/登出/保存配置 
+        // 登录/登出 (此处假设 /api/login 是用于获取管理员权限的，如果不需要后端登录，可以移除)
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             const username = e.target.username.value;
@@ -872,6 +912,7 @@
             const authHeader = `Basic ${authString}`;
 
             try {
+                // 模拟登录请求 (此处的 /api/login 需要您的后端支持)
                 const response = await fetch('/api/login', {
                     method: 'POST',
                     headers: {
@@ -897,7 +938,7 @@
                 }
             } catch (error) {
                 console.error('Login error:', error);
-                alert('登录过程中发生错误。');
+                alert('登录过程中发生错误，请检查后端服务。');
             }
         });
 
@@ -908,10 +949,10 @@
             alert('已登出管理员账户。');
         });
 
+        // 保存配置
         configForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (!basicAuthHeader) return alert('请先登录管理员账户。');
-
+            
             const configData = {
                 name: e.target.name.value,
                 apiKey: e.target.apiKey.value, 
@@ -921,41 +962,16 @@
                 systemInstruction: e.target.systemInstruction.value,
             };
 
-            try {
-                const response = await fetch('/api/config', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': basicAuthHeader
-                    },
-                    body: JSON.stringify(configData)
-                });
-
-                if (response.status === 401) {
-                     throw new Error('登录已过期，请重新登录。');
-                }
-
-                const data = await response.json();
-
-                if (data.success) {
-                    alert('配置保存成功！');
-                    updateLogoName(configData.name);
-                    hideModal();
-                } else {
-                    alert('保存配置失败: ' + data.message);
-                }
-            } catch (error) {
-                console.error('Save config error:', error);
-                if (error.message.includes('过期')) {
-                    alert(error.message);
-                    localStorage.removeItem('basicAuth');
-                    basicAuthHeader = null;
-                    updateAdminUI(false);
-                    hideModal();
-                } else {
-                    alert('保存配置过程中发生错误。');
-                }
-            }
+            // 将配置保存到本地存储
+            localStorage.setItem(CONFIG_KEY, JSON.stringify(configData));
+            updateLogoName(configData.name);
+            alert('配置已成功保存到本地存储！');
+            hideModal();
+            
+            // 假设这里可以有一个可选的服务器端保存逻辑
+            // if (basicAuthHeader) { 
+            //     await fetch('/api/config', { ... });
+            // }
         });
 
 
